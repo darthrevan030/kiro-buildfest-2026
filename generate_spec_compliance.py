@@ -8,7 +8,6 @@ report as a 4-column Markdown table.
 Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
 """
 
-import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -161,7 +160,8 @@ def verify_artifact(task_text: str, project_root: Path) -> str:
             filename = Path(target).name
             specs_dir = project_root / ".kiro" / "specs"
             for found in specs_dir.rglob(filename):
-                return f"{found.relative_to(project_root)} exists"
+                rel = str(found.relative_to(project_root)).replace("\\", "/")
+                return f"{rel} exists"
 
         return f"{target} missing"
 
