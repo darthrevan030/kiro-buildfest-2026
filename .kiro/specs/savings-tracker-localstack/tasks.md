@@ -23,7 +23,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - **Property 2: Monthly savings computation**
     - **Validates: Requirements 2.2**
 
-  - [ ] 1.4 Write property test: Recalculate-from-source invariant
+  - [x] 1.4 Write property test: Recalculate-from-source invariant
     - **Property 3: Recalculate-from-source invariant**
     - **Validates: Requirements 2.3, 2.4**
 
