@@ -1,29 +1,55 @@
 {
   "findings": [
     {
+      "id": "finding-sg-redis-001",
+      "resource_id": "sg-prod-redis",
       "check_type": "security_group",
-      "resource_id": "sg-0abc123def456a1b2",
       "severity": "CRITICAL",
       "port": 6379,
       "cidr": "0.0.0.0/0",
       "current_state": "open_to_world",
       "required_state": "vpc_only",
       "title": "Redis port open to internet",
-      "description": "Security group allows inbound traffic from 0.0.0.0/0 on port 6379 (Redis). Database and cache ports must be restricted to VPC CIDR only."
+      "description": "Security group sg-prod-redis allows inbound traffic from 0.0.0.0/0 on port 6379 (Redis). Database and cache ports must be restricted to VPC CIDR only."
     },
     {
+      "id": "finding-enc-cache-001",
+      "resource_id": "cache-prod-legacy",
       "check_type": "encryption",
-      "resource_id": "vol-0xyz789abc123def0",
       "severity": "HIGH",
       "encryption_at_rest": false,
       "current_state": "unencrypted",
       "required_state": "encrypted",
+      "title": "ElastiCache cluster without encryption at rest",
+      "description": "ElastiCache cluster cache-prod-legacy does not have encryption at rest enabled. All cache clusters must be encrypted to protect data at rest."
+    },
+    {
+      "id": "finding-sg-ssh-001",
+      "resource_id": "sg-web-servers",
+      "check_type": "security_group",
+      "severity": "HIGH",
+      "port": 22,
+      "cidr": "0.0.0.0/0",
+      "current_state": "open_to_world",
+      "required_state": "vpc_only",
+      "title": "SSH port open to internet",
+      "description": "Security group sg-web-servers allows inbound traffic from 0.0.0.0/0 on port 22 (SSH). SSH access must be restricted to VPC CIDR only."
+    },
+    {
+      "id": "finding-enc-ebs-001",
+      "resource_id": "vol-data-001",
+      "check_type": "encryption",
+      "severity": "MEDIUM",
+      "encryption_at_rest": false,
+      "current_state": "unencrypted",
+      "required_state": "encrypted",
       "title": "EBS volume without encryption at rest",
-      "description": "EBS volume vol-0xyz789abc123def0 does not have encryption at rest enabled. All block storage must be encrypted to protect data at rest."
+      "description": "EBS volume vol-data-001 does not have encryption at rest enabled. All block storage must be encrypted to protect data at rest."
     }
   ],
   "dependencies": {
-    "vol-0xyz789abc123def0": [],
-    "sg-0abc123def456a1b2": ["cache-prod-legacy", "i-0fed987cba654xyz1"]
+    "cache-prod-legacy": [],
+    "vol-data-001": [],
+    "sg-prod-redis": ["cache-prod-legacy"]
   }
 }
