@@ -35,7 +35,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - **Property 5: Savings summary correctness**
     - **Validates: Requirements 4.1, 4.2, 4.4**
 
-- [ ] 2. Implement Reasoning Logger and agent integration
+- [x] 2. Implement Reasoning Logger and agent integration
   - [x] 2.1 Create `agents/reasoning_logger.py` with ReasoningLogger class
     - Implement `__init__` with configurable `log_path` defaulting to `agent_reasoning.log`
     - Implement `truncate()` to clear log at audit start
@@ -69,7 +69,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Use `st.text(alphabet=st.characters(blacklist_categories=('Cs',)))` for message and agent fields — must cover quotes, backslashes, and unicode characters, NOT just default ASCII
     - **Validates: Requirements 9.4, 9.9**
 
-  - [ ] 2.6 Write property test: Reasoning logger sequential append
+  - [x] 2.6 Write property test: Reasoning logger sequential append
     - **Property 9: Reasoning logger sequential append**
     - **Validates: Requirements 9.6**
 
