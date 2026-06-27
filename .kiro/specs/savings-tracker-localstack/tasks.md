@@ -76,7 +76,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
 - [x] 3. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
-- [-] 4. LocalStack wiring and demo infrastructure
+- [x] 4. LocalStack wiring and demo infrastructure
   - [x] 4.1 Replace `terraform` with `tflocal` in `mcp_server/aws_janitor_mcp.py`
     - Change `["terraform", "init", "-backend=false"]` to `["tflocal", "init", "-backend=false"]`
     - Change `["terraform", "validate"]` to `["tflocal", "validate"]`
@@ -92,7 +92,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Mount Docker socket volume
     - _Requirements: 6.3_
 
-  - [-] 4.4 Create `Makefile` at project root with `demo` target
+  - [x] 4.4 Create `Makefile` at project root with `demo` target
     - Run `docker-compose up -d` to start LocalStack
     - Poll LocalStack health endpoint (`http://localhost:4566/_localstack/health`) every 2s, max 30 attempts with progress dots
     - Launch Streamlit dashboard via `streamlit run app.py` as the final step
@@ -100,7 +100,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Exit non-zero with error message if health check exceeds 60 seconds
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-  - [-] 4.5 Wire `tflocal apply -auto-approve` into orchestrator approval flow
+  - [x] 4.5 Wire `tflocal apply -auto-approve` into orchestrator approval flow
     - In `orchestrator.py` `approve()` method, insert the `tflocal apply` call AFTER `_run_pre_remediation_hook()` returns None (success) and BEFORE `_run_post_remediation_hook()` is called
     - The execution sequence in `approve()` is: (1) validate input → (2) `_run_pre_remediation_hook()` (tflocal validate) → (3) **INSERT `tflocal apply -auto-approve` HERE** → (4) `_run_post_remediation_hook()` (audit.log) → (5) `_savings_tracker.record_run()`
     - Output directory for `tflocal apply` is `self.project_root / "output"` (where `remediation.tf` lives)
