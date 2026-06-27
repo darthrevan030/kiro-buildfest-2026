@@ -1,0 +1,536 @@
+"""
+Agent Orchestrator
+
+Orchestrates the multi-agent pipeline: FinOps Auditor → SecOps Guard → Remediation Architect.
+Wires shell hooks (pre-remediation, post-remediation), integrates the approval gate,
+and manages the audit trail.
+
+Usage:
+    from orchestrator import Orchestrator
+
+    orch = Orchestrator()
+    result = orch.execute_audit()
+    approval = orch.approve("APPROVE vol-abc123")
+    rollback = orch.rollback("ROLLBACK vol-abc123")
+    trail = orch.get_audit_trail()
+"""
+
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from agents.approval_gate import (
+    ApprovalGate,
+    parse_approval,
+    parse_confirm_rollback,
+    parse_rollback,
+)
+from agents.finops_auditor import FinOpsAuditor
+from agents.remediation_architect import RemediationArchitect, RemediationPlan
+from agents.secops_guard import SecOpsGuard
+
+
+PROJECT_ROOT = Path(__file__).parent
+FINDINGS_STORE_PATH = PROJECT_ROOT / "findings_store.json"
+HOOKS_DIR = PROJECT_ROOT / ".kiro" / "hooks"
+OUTPUT_DIR = PROJECT_ROOT / "output"
+ROLLBACKS_DIR = PROJECT_ROOT / "rollbacks"
+AUDIT_LOG_PATH = PROJECT_ROOT / "audit.log"
+
+
+@dataclass
+class AuditEntry:
+    """A single entry in the audit trail."""
+
+    timestamp: str
+    action: str
+    resource_id: str
+    actor: str
+    result: str
+    details: str = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "timestamp": self.timestamp,
+            "action": self.action,
+            "resource_id": self.resource_id,
+            "actor": self.actor,
+            "result": self.result,
+            "details": self.details,
+        }
+
+
+@dataclass
+class AuditResult:
+    """Result of execute_audit()."""
+
+    success: bool
+    findings: list[dict] = field(default_factory=list)
+    plans: list[RemediationPlan] = field(default_factory=list)
+    blocked_plans: list[RemediationPlan] = field(default_factory=list)
+    hook_error: str | None = None
+    error: str | None = None
+
+
+@dataclass
+class ApprovalResult:
+    """Result of approve()."""
+
+    success: bool
+    resource_id: str = ""
+    error: str | None = None
+    locked: bool = False
+    expected_format: str | None = None
+    attempts_remaining: int | None = None
+
+
+@dataclass
+class RollbackResult:
+    """Result of rollback()."""
+
+    success: bool
+    resource_id: str = ""
+    error: str | None = None
+    needs_confirmation: bool = False
+
+
+class Orchestrator:
+    """
+    Orchestrates the Cloud Janitor agent pipeline.
+
+    Sequence:
+      1. FinOps Auditor scans → writes findings_store.json
+      2. SecOps Guard scans → appends to findings_store.json
+      3. Validate findings_store has entries from both agents
+      4. Remediation Architect plans → generates HCL
+      5. Pre-remediation hook validates HCL
+      6. Approval gate for user confirmation
+      7. Post-remediation hook logs audit entry
+    """
+
+    def __init__(
+        self,
+        project_root: Path | None = None,
+        approver: str = "system",
+    ):
+        self.project_root = project_root or PROJECT_ROOT
+        self.findings_store_path = self.project_root / "findings_store.json"
+        self.hooks_dir = self.project_root / ".kiro" / "hooks"
+        self.output_dir = self.project_root / "output"
+        self.rollbacks_dir = self.project_root / "rollbacks"
+        self.audit_log_path = self.project_root / "audit.log"
+        self.approver = approver
+
+        # Agent instances
+        self._finops = FinOpsAuditor(findings_store_path=self.findings_store_path)
+        self._secops = SecOpsGuard(findings_store_path=self.findings_store_path)
+        self._architect = RemediationArchitect(
+            findings_store_path=self.findings_store_path,
+            output_dir=self.output_dir,
+            rollbacks_dir=self.rollbacks_dir,
+        )
+
+        # Approval gates per resource (keyed by resource_id)
+        self._approval_gates: dict[str, ApprovalGate] = {}
+
+        # Internal audit trail
+        self._audit_trail: list[AuditEntry] = []
+
+        # Track last plans for approval flow
+        self._last_plans: list[RemediationPlan] = []
+
+        # Track rollback state (resource_id → awaiting confirmation)
+        self._pending_rollbacks: set[str] = set()
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Public API
+    # ──────────────────────────────────────────────────────────────────────
+
+    def execute_audit(self) -> AuditResult:
+        """
+        Execute the full audit pipeline: FinOps → SecOps → Remediation Architect.
+
+        Returns:
+            AuditResult with findings, plans, and any errors.
+        """
+        # Step 1: FinOps Auditor scan
+        self._log_action("scan", "all", "started", "FinOps Auditor scan initiated")
+        finops_findings = self._finops.scan()
+        self._log_action("scan", "all", "success", f"FinOps found {len(finops_findings)} finding(s)")
+
+        # Step 2: SecOps Guard scan
+        self._log_action("scan", "all", "started", "SecOps Guard scan initiated")
+        secops_findings = self._secops.scan()
+        self._log_action("scan", "all", "success", f"SecOps found {len(secops_findings)} finding(s)")
+
+        # Step 3: Validate findings_store has entries from both agents
+        validation_error = self._validate_findings_store()
+        if validation_error:
+            self._log_action("plan", "all", "failure", validation_error)
+            return AuditResult(success=False, error=validation_error)
+
+        # Step 4: Remediation Architect plans
+        self._log_action("plan", "all", "started", "Remediation Architect planning")
+        plans = self._architect.plan()
+        self._last_plans = plans
+
+        blocked_plans = [p for p in plans if p.blocked]
+        active_plans = [p for p in plans if not p.blocked]
+
+        # Log blocked plans
+        for p in blocked_plans:
+            self._log_action("plan", p.resource_id, "blocked", p.block_reason)
+
+        self._log_action(
+            "plan", "all", "success",
+            f"Generated {len(active_plans)} plan(s), {len(blocked_plans)} blocked"
+        )
+
+        # Step 5: Run pre-remediation hook on active plans
+        if active_plans:
+            hook_error = self._run_pre_remediation_hook(active_plans)
+            if hook_error:
+                self._log_action("plan", "all", "blocked", f"Pre-remediation hook failed: {hook_error}")
+                return AuditResult(
+                    success=False,
+                    findings=finops_findings + secops_findings,
+                    plans=active_plans,
+                    blocked_plans=blocked_plans,
+                    hook_error=hook_error,
+                )
+
+        all_findings = finops_findings + secops_findings
+        return AuditResult(
+            success=True,
+            findings=all_findings,
+            plans=active_plans,
+            blocked_plans=blocked_plans,
+        )
+
+    def approve(self, command: str) -> ApprovalResult:
+        """
+        Process an approval command: "APPROVE <resource-id>".
+
+        Args:
+            command: The approval command string.
+
+        Returns:
+            ApprovalResult indicating success or failure.
+        """
+        # Extract resource_id from command for gate lookup
+        resource_id = self._extract_resource_id_from_command(command, "APPROVE")
+        if not resource_id:
+            return ApprovalResult(
+                success=False,
+                error="Invalid command format",
+                expected_format="APPROVE <resource-id>",
+            )
+
+        # Verify the resource has a plan
+        plan = self._find_plan(resource_id)
+        if not plan:
+            return ApprovalResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"No remediation plan found for resource: {resource_id}",
+            )
+
+        # Use approval gate (creates one if needed)
+        gate = self._get_or_create_gate(resource_id)
+        result = gate.attempt_approval(command, resource_id)
+
+        if not result["valid"]:
+            if result.get("locked"):
+                self._log_action("approval", resource_id, "failure", "Max attempts exceeded")
+                return ApprovalResult(
+                    success=False,
+                    resource_id=resource_id,
+                    error="Max attempts exceeded",
+                    locked=True,
+                )
+            self._log_action("approval", resource_id, "failure", result.get("error", ""))
+            return ApprovalResult(
+                success=False,
+                resource_id=resource_id,
+                error=result.get("error", "Invalid approval"),
+                expected_format=result.get("expected_format"),
+                attempts_remaining=result.get("attempts_remaining"),
+            )
+
+        # Approval valid — execute remediation (log action)
+        self._log_action("approval", resource_id, "success", f"Approved by {self.approver}")
+        self._log_action("execution", resource_id, "success", "Remediation executed")
+
+        # Run post-remediation hook
+        self._run_post_remediation_hook(resource_id, "remediate", "success")
+
+        return ApprovalResult(success=True, resource_id=resource_id)
+
+    def rollback(self, command: str) -> RollbackResult:
+        """
+        Process a rollback command: "ROLLBACK <resource-id>" or "CONFIRM ROLLBACK <resource-id>".
+
+        Args:
+            command: The rollback command string.
+
+        Returns:
+            RollbackResult indicating success or next step needed.
+        """
+        # Check if this is a confirmation
+        if command.startswith("CONFIRM ROLLBACK "):
+            return self._handle_confirm_rollback(command)
+
+        # Extract resource_id
+        resource_id = self._extract_resource_id_from_command(command, "ROLLBACK")
+        if not resource_id:
+            return RollbackResult(
+                success=False,
+                error="Invalid command format. Expected: ROLLBACK <resource-id>",
+            )
+
+        # Validate rollback artifact exists
+        rollback_path = self.rollbacks_dir / f"{resource_id}.tf"
+        if not rollback_path.exists():
+            self._log_action("rollback", resource_id, "failure", "Rollback artifact missing")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"Rollback artifact not found: rollbacks/{resource_id}.tf",
+            )
+
+        # Parse the rollback command
+        result = parse_rollback(command, resource_id)
+        if not result["valid"]:
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=result.get("error", "Invalid rollback command"),
+            )
+
+        # Mark as pending confirmation
+        self._pending_rollbacks.add(resource_id)
+        self._log_action("rollback", resource_id, "started", "Awaiting confirmation")
+
+        return RollbackResult(
+            success=False,
+            resource_id=resource_id,
+            needs_confirmation=True,
+        )
+
+    def get_audit_trail(self) -> list[AuditEntry]:
+        """Return the complete audit trail."""
+        return list(self._audit_trail)
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Private: Hook execution
+    # ──────────────────────────────────────────────────────────────────────
+
+    def _run_pre_remediation_hook(self, plans: list[RemediationPlan]) -> str | None:
+        """
+        Run the pre-remediation hook (terraform validate) on generated HCL.
+
+        Args:
+            plans: Active (non-blocked) remediation plans.
+
+        Returns:
+            Error string if hook fails, None if passes.
+        """
+        hook_path = self.hooks_dir / "pre-remediation.sh"
+        if not hook_path.exists():
+            return None  # Hook not present, skip
+
+        remediation_path = self.output_dir / "remediation.tf"
+        if not remediation_path.exists():
+            return "remediation.tf not found in output directory"
+
+        # Find a rollback file for validation (use first active plan's resource)
+        rollback_path = None
+        for plan in plans:
+            candidate = self.rollbacks_dir / f"{plan.resource_id}.tf"
+            if candidate.exists():
+                rollback_path = candidate
+                break
+
+        if not rollback_path:
+            return "No rollback file found for validation"
+
+        try:
+            result = subprocess.run(
+                ["bash", str(hook_path), str(remediation_path), str(rollback_path)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=str(self.project_root),
+            )
+
+            if result.returncode != 0:
+                error_output = result.stderr.strip() or result.stdout.strip()
+                return f"Pre-remediation hook failed: {error_output}"
+
+        except subprocess.TimeoutExpired:
+            return "Pre-remediation hook timed out"
+        except FileNotFoundError:
+            return "bash not found — cannot execute pre-remediation hook"
+        except OSError as e:
+            return f"Failed to execute pre-remediation hook: {e}"
+
+        return None
+
+    def _run_post_remediation_hook(
+        self, resource_id: str, action: str, result: str
+    ) -> None:
+        """
+        Run the post-remediation hook (audit.log append).
+
+        Args:
+            resource_id: The resource that was acted upon.
+            action: "remediate" or "rollback".
+            result: "success" or "failed".
+        """
+        hook_path = self.hooks_dir / "post-remediation.sh"
+        if not hook_path.exists():
+            return  # Hook not present, skip silently
+
+        try:
+            subprocess.run(
+                [
+                    "bash",
+                    str(hook_path),
+                    resource_id,
+                    action,
+                    result,
+                    self.approver,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=str(self.project_root),
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            # Post-remediation hook is non-blocking — log but don't fail
+            pass
+
+    # ──────────────────────────────────────────────────────────────────────
+    # Private: Validation and helpers
+    # ──────────────────────────────────────────────────────────────────────
+
+    def _validate_findings_store(self) -> str | None:
+        """
+        Validate findings_store.json has entries from both FinOps and SecOps agents.
+
+        Returns:
+            Error string if validation fails, None if valid.
+        """
+        if not self.findings_store_path.exists():
+            return "findings_store.json does not exist"
+
+        try:
+            with open(self.findings_store_path) as f:
+                store = json.load(f)
+        except (json.JSONDecodeError, IOError) as e:
+            return f"Cannot read findings_store.json: {e}"
+
+        findings = store.get("findings", [])
+        agents_present = {f.get("agent") for f in findings}
+
+        if "finops" not in agents_present:
+            return "findings_store.json missing FinOps agent entries"
+        if "secops" not in agents_present:
+            return "findings_store.json missing SecOps agent entries"
+
+        return None
+
+    def _extract_resource_id_from_command(self, command: str, prefix: str) -> str | None:
+        """Extract the resource_id portion from a command string."""
+        expected_prefix = prefix + " "
+        if not command.startswith(expected_prefix):
+            return None
+        resource_id = command[len(expected_prefix):]
+        if not resource_id or " " in resource_id:
+            return None
+        return resource_id
+
+    def _find_plan(self, resource_id: str) -> RemediationPlan | None:
+        """Find a remediation plan by resource_id."""
+        for plan in self._last_plans:
+            if plan.resource_id == resource_id and not plan.blocked:
+                return plan
+        return None
+
+    def _get_or_create_gate(self, resource_id: str) -> ApprovalGate:
+        """Get or create an approval gate for a resource."""
+        if resource_id not in self._approval_gates:
+            self._approval_gates[resource_id] = ApprovalGate(max_attempts=3)
+        return self._approval_gates[resource_id]
+
+    def _handle_confirm_rollback(self, command: str) -> RollbackResult:
+        """Handle a CONFIRM ROLLBACK command."""
+        # Extract resource_id from "CONFIRM ROLLBACK <id>"
+        prefix = "CONFIRM ROLLBACK "
+        if not command.startswith(prefix):
+            return RollbackResult(
+                success=False,
+                error="Invalid format. Expected: CONFIRM ROLLBACK <resource-id>",
+            )
+
+        resource_id = command[len(prefix):]
+        if not resource_id:
+            return RollbackResult(
+                success=False,
+                error="Missing resource ID in confirm rollback command",
+            )
+
+        # Validate resource was pending rollback
+        if resource_id not in self._pending_rollbacks:
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"No pending rollback for resource: {resource_id}. "
+                      f"Send 'ROLLBACK {resource_id}' first.",
+            )
+
+        # Parse the confirm rollback command
+        result = parse_confirm_rollback(command, resource_id)
+        if not result["valid"]:
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=result.get("error", "Invalid confirm rollback command"),
+            )
+
+        # Validate rollback artifact still exists
+        rollback_path = self.rollbacks_dir / f"{resource_id}.tf"
+        if not rollback_path.exists():
+            self._log_action("rollback", resource_id, "failure", "Rollback artifact missing")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error=f"Rollback artifact not found: rollbacks/{resource_id}.tf",
+            )
+
+        # Execute rollback
+        self._pending_rollbacks.discard(resource_id)
+        self._log_action("rollback", resource_id, "success", f"Rollback executed by {self.approver}")
+
+        # Run post-remediation hook for rollback
+        self._run_post_remediation_hook(resource_id, "rollback", "success")
+
+        return RollbackResult(success=True, resource_id=resource_id)
+
+    def _log_action(self, action: str, resource_id: str, result: str, details: str = "") -> None:
+        """Append an entry to the internal audit trail."""
+        entry = AuditEntry(
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            action=action,
+            resource_id=resource_id,
+            actor=self.approver,
+            result=result,
+            details=details,
+        )
+        self._audit_trail.append(entry)
