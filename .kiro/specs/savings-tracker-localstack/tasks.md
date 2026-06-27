@@ -52,7 +52,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Add `emit("finops_auditor", "handoff", ...)` at scan complete
     - _Requirements: 9.1_
 
-  - [ ] 2.3 Integrate ReasoningLogger into SecOps Guard
+  - [x] 2.3 Integrate ReasoningLogger into SecOps Guard
     - Add `emit("secops_guard", "check", ...)` at scan start and per-rule
     - Add `emit("secops_guard", "finding", ...)` per violation detected
     - Add `emit("secops_guard", "handoff", ...)` at scan complete
