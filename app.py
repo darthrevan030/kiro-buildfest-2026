@@ -16,11 +16,12 @@ from __future__ import annotations
 import difflib
 import json
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import streamlit as st
 
-from orchestrator import AuditResult, Orchestrator
+from orchestrator import ApprovalResult, AuditResult, Orchestrator, RollbackResult
 
 # ──────────────────────────────────────────────────────────────────────
 # Page config
@@ -112,6 +113,12 @@ if "agent_status" not in st.session_state:
         "secops": "idle",
         "remediation": "idle",
     }
+
+if "approval_history" not in st.session_state:
+    st.session_state.approval_history = []
+
+if "pending_rollback" not in st.session_state:
+    st.session_state.pending_rollback = None
 
 # ──────────────────────────────────────────────────────────────────────
 # Helper functions
@@ -577,3 +584,183 @@ with bottom_right:
                     st.text(line)
             else:
                 st.info("No audit entries yet. Execute an audit to generate trail.")
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Approval & Actions Section
+# ──────────────────────────────────────────────────────────────────────
+
+st.divider()
+st.subheader("🔐 Approval & Actions")
+
+# Only show when an audit has completed with plans
+audit_result = st.session_state.audit_result
+if audit_result is not None and audit_result.plans:
+    # Gather resource IDs from active plans
+    plan_resource_ids = [p.resource_id for p in audit_result.plans]
+
+    with st.container(border=True):
+        # Resource selector
+        selected_resource = st.selectbox(
+            "Select resource to approve or rollback:",
+            options=plan_resource_ids,
+            key="approval_resource_select",
+        )
+
+        # ── Pending rollback confirmation flow ────────────────────────
+        if st.session_state.pending_rollback is not None:
+            pending_id = st.session_state.pending_rollback
+            st.warning(
+                f"⚠️ Rollback pending confirmation for `{pending_id}`. "
+                f'Type **CONFIRM ROLLBACK {pending_id}** below to proceed.'
+            )
+
+            confirm_input = st.text_input(
+                "Confirm rollback command:",
+                key="confirm_rollback_input",
+                placeholder=f"CONFIRM ROLLBACK {pending_id}",
+            )
+
+            col_confirm, col_cancel = st.columns([1, 1])
+            with col_confirm:
+                if st.button("✅ Confirm Rollback", key="btn_confirm_rollback", use_container_width=True):
+                    orch = st.session_state.orchestrator
+                    result = orch.rollback(confirm_input)
+                    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+                    if result.success:
+                        st.session_state.pending_rollback = None
+                        st.session_state.approval_history.append({
+                            "action": "rollback_confirmed",
+                            "resource_id": result.resource_id,
+                            "timestamp": ts,
+                            "success": True,
+                        })
+                        st.rerun()
+                    else:
+                        st.session_state.approval_history.append({
+                            "action": "rollback_confirm_failed",
+                            "resource_id": pending_id,
+                            "timestamp": ts,
+                            "success": False,
+                            "error": result.error,
+                        })
+                        st.rerun()
+
+            with col_cancel:
+                if st.button("❌ Cancel Rollback", key="btn_cancel_rollback", use_container_width=True):
+                    st.session_state.pending_rollback = None
+                    st.rerun()
+
+        # ── Normal approval / rollback flow ───────────────────────────
+        else:
+            # Approval input
+            approval_input = st.text_input(
+                "Approval command:",
+                key="approval_input",
+                placeholder=f"APPROVE {selected_resource}",
+                help="Enter the exact command: APPROVE <resource-id> (case-sensitive)",
+            )
+
+            col_approve, col_rollback = st.columns([1, 1])
+
+            with col_approve:
+                if st.button("✅ Submit Approval", key="btn_approve", use_container_width=True):
+                    orch = st.session_state.orchestrator
+                    result = orch.approve(approval_input, resource_id=selected_resource)
+                    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+                    st.session_state.approval_history.append({
+                        "action": "approval",
+                        "resource_id": result.resource_id or selected_resource,
+                        "timestamp": ts,
+                        "success": result.success,
+                        "error": result.error,
+                        "locked": result.locked,
+                        "expected_format": result.expected_format,
+                        "attempts_remaining": result.attempts_remaining,
+                    })
+                    st.rerun()
+
+            with col_rollback:
+                if st.button("🔄 Rollback", key="btn_rollback", use_container_width=True):
+                    orch = st.session_state.orchestrator
+                    command = f"ROLLBACK {selected_resource}"
+                    result = orch.rollback(command)
+                    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+                    if result.needs_confirmation:
+                        st.session_state.pending_rollback = selected_resource
+                        st.session_state.approval_history.append({
+                            "action": "rollback_initiated",
+                            "resource_id": result.resource_id,
+                            "timestamp": ts,
+                            "success": False,
+                            "needs_confirmation": True,
+                        })
+                        st.rerun()
+                    elif result.success:
+                        st.session_state.approval_history.append({
+                            "action": "rollback",
+                            "resource_id": result.resource_id,
+                            "timestamp": ts,
+                            "success": True,
+                        })
+                        st.rerun()
+                    else:
+                        st.session_state.approval_history.append({
+                            "action": "rollback_failed",
+                            "resource_id": result.resource_id or selected_resource,
+                            "timestamp": ts,
+                            "success": False,
+                            "error": result.error,
+                        })
+                        st.rerun()
+
+    # ── Confirmation display ──────────────────────────────────────────
+    if st.session_state.approval_history:
+        st.markdown("**Recent Actions**")
+        # Show last 5 actions in reverse order
+        for entry in reversed(st.session_state.approval_history[-5:]):
+            ts = entry.get("timestamp", "")
+            resource = entry.get("resource_id", "")
+            action = entry.get("action", "")
+
+            if entry.get("success"):
+                # Success — green confirmation
+                if action == "rollback_confirmed":
+                    st.success(f"✅ Rollback confirmed for `{resource}` at {ts}")
+                else:
+                    st.success(f"✅ Approved `{resource}` at {ts}")
+
+            elif entry.get("locked"):
+                # Locked — max attempts exceeded
+                st.error(
+                    f"🔒 **Locked** — Max approval attempts exceeded for `{resource}`. "
+                    f"No further attempts allowed."
+                )
+
+            elif entry.get("needs_confirmation"):
+                # Rollback awaiting confirmation — yellow
+                st.warning(
+                    f"⏳ Rollback initiated for `{resource}` — awaiting confirmation "
+                    f"(`CONFIRM ROLLBACK {resource}`)"
+                )
+
+            else:
+                # Failure — red error with hints
+                error_msg = entry.get("error", "Unknown error")
+                expected = entry.get("expected_format")
+                remaining = entry.get("attempts_remaining")
+
+                detail_parts = [f"❌ Failed: {error_msg}"]
+                if expected:
+                    detail_parts.append(f"Expected format: `{expected}`")
+                if remaining is not None:
+                    detail_parts.append(f"Attempts remaining: **{remaining}**")
+
+                st.error(" · ".join(detail_parts))
+
+else:
+    with st.container(border=True):
+        st.info("No remediation plans available. Execute an audit to generate plans for approval.")
