@@ -173,7 +173,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Make the hook executable
     - _Requirements: 8.6_
 
-  - [ ] 8.3 Write property test: Compliance generator parsing and mapping
+  - [x] 8.3 Write property test: Compliance generator parsing and mapping
     - **Property 6: Compliance generator parsing and mapping**
     - **Validates: Requirements 8.2, 8.3**
 

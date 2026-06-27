@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-27T14:53:57Z
+Generated: 2026-06-27T16:20:30Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -82,9 +82,9 @@ Generated: 2026-06-27T14:53:57Z
 | 76 | 6.1 Add runtime files to `.gitignore` | ✅ Done | no mapping |
 | 77 | 7. Checkpoint | ✅ Done | no mapping |
 | 78 | 8. Implement SPEC_COMPLIANCE.md generator | ❌ Pending | — |
-| 79 | 8.1 Create `generate_spec_compliance.py` at project root | ⏳ Partial | no mapping |
-| 80 | 8.2 Create Git post-commit hook | ❌ Pending | — |
-| 81 | 8.3 Write property test: Compliance generator parsing and mapping | ❌ Pending | — |
+| 79 | 8.1 Create `generate_spec_compliance.py` at project root | ✅ Done | no mapping |
+| 80 | 8.2 Create Git post-commit hook | ✅ Done | no mapping |
+| 81 | 8.3 Write property test: Compliance generator parsing and mapping | ✅ Done | no mapping |
 | 82 | 8.4 Write property test: Compliance generator output format | ❌ Pending | — |
 | 83 | 9. Implement Streamlit Reasoning Panel | ❌ Pending | — |
 | 84 | 9.1 Add reasoning log panel to `app.py` | ❌ Pending | — |
