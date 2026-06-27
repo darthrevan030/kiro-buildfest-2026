@@ -7,7 +7,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
 ## Tasks
 
 - [ ] 1. Implement Savings Tracker core module
-  - [ ] 1.1 Create `savings.py` with SavingsTracker class
+  - [x] 1.1 Create `savings.py` with SavingsTracker class
     - Implement `__init__`, `_load_ledger`, `_write_ledger`, `_compute_monthly_savings`, `_recalculate_total` methods
     - Implement `record_run(resources_remediated)` with duplicate detection via `run_id` matching
     - Implement `get_savings_summary()` returning `total_lifetime_monthly`, `total_lifetime_annual`, `total_runs`, `last_run_savings`
