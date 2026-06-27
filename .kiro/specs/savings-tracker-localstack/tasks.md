@@ -160,7 +160,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 8. Implement SPEC_COMPLIANCE.md generator
-  - [ ] 8.1 Create `generate_spec_compliance.py` at project root
+  - [x] 8.1 Create `generate_spec_compliance.py` at project root
     - Read and parse `.kiro/specs/tasks.md` for checkbox lines (`- [x]`, `- [ ]`, `- [-]`)
     - Implement keyword-to-file mapping table per requirements 8.3
     - Verify file existence for done tasks
