@@ -139,7 +139,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Handle `FileNotFoundError` and `OSError` from savings tracker gracefully (log warning, don't block approval)
     - _Requirements: 5.1, 5.2, 5.3_
 
-  - [ ] 5.2 Add ReasoningLogger truncation at audit start in Orchestrator
+  - [x] 5.2 Add ReasoningLogger truncation at audit start in Orchestrator
     - Instantiate ReasoningLogger in Orchestrator and call `truncate()` at the beginning of `execute_audit()`
     - Pass the shared logger instance to each agent
     - _Requirements: 9.5_
