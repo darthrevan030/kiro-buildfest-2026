@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-27T17:50:19Z
+Generated: 2026-06-27T17:50:59Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -91,6 +91,6 @@ Generated: 2026-06-27T17:50:19Z
 | 85 | 8.4 Write property test: Compliance generator output format | ✅ Done | no mapping |
 | 86 | 9. Implement Streamlit Reasoning Panel | ❌ Pending | — |
 | 87 | 9.1 Add reasoning log panel to `app.py` | ✅ Done | app.py exists |
-| 88 | 9.2 Write property test: Agent section header transitions | ⏳ Partial | no mapping |
+| 88 | 9.2 Write property test: Agent section header transitions | ✅ Done | no mapping |
 | 89 | 9.3 Write property test: Malformed line resilience | ❌ Pending | — |
 | 90 | 10. Final checkpoint | ❌ Pending | — |
