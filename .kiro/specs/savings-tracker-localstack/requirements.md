@@ -84,7 +84,7 @@ This feature adds multiple capabilities to the Cloud Janitor project: (1) a pers
 
 #### Acceptance Criteria
 
-1. THE Terraform_Executor SHALL invoke `tflocal` in place of `terraform` for ALL subprocess calls in `mcp_server/aws_janitor_mcp.py` and any hook scripts — this includes `terraform init`, `terraform validate`, and `terraform apply`. No subprocess call in the codebase shall invoke the bare `terraform` binary.
+1. THE Terraform_Executor SHALL invoke `tflocal` in place of `terraform` for ALL subprocess calls in the codebase — this includes `terraform init`, `terraform validate`, and `terraform apply`. Specifically: (a) `mcp_server/aws_janitor_mcp.py` `validate_hcl()` function, and (b) `.kiro/hooks/pre-remediation.sh` which currently calls `terraform -chdir=... init` and `terraform -chdir=... validate`. No subprocess call in the codebase shall invoke the bare `terraform` binary.
 2. THE Terraform_Executor SHALL depend on the `terraform-local` Python package (added to requirements.txt)
 3. THE Docker_Compose_Configuration SHALL define a `localstack` service in `docker-compose.yml` that exposes port 4566 to the host and configures the `SERVICES` environment variable to include EC2, ElastiCache, S3, and EBS
 4. THE Terraform_Executor SHALL invoke `tflocal apply -auto-approve` (not just `tflocal plan`) against the LocalStack_Environment during execution of the `make demo` target
