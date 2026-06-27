@@ -54,6 +54,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - Replace inline fixture-reading logic in `get_cost_data`, `get_security_data`, `check_dependencies` with delegation to `_provider`
     - Keep `validate_hcl` unchanged and directly in `aws_janitor_mcp.py`
     - Remove the now-unused `FIXTURES_DIR` constant (FixtureProvider handles its own path)
+    - **IMPORTANT: Do NOT remove imports that `validate_hcl` still needs** (`tempfile`, `os`, `subprocess`). After refactoring, verify with: `python -c "from mcp_server.aws_janitor_mcp import validate_hcl; print('ok')"`
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3_
 
   - [ ]* 3.3 Write property tests for provider selection
