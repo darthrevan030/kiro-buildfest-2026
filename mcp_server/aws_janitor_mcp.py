@@ -95,7 +95,7 @@ def validate_hcl(hcl_content: str) -> dict:
 
         # terraform init is required before validate in most cases
         init_result = subprocess.run(
-            ["terraform", "init", "-backend=false"],
+            ["tflocal", "init", "-backend=false"],
             cwd=tmpdir,
             capture_output=True,
             text=True,
@@ -105,7 +105,7 @@ def validate_hcl(hcl_content: str) -> dict:
             return {"valid": False, "error": f"terraform init failed: {init_result.stderr.strip()}"}
 
         result = subprocess.run(
-            ["terraform", "validate"],
+            ["tflocal", "validate"],
             cwd=tmpdir,
             capture_output=True,
             text=True,

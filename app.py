@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -101,6 +102,7 @@ FINDINGS_STORE_PATH = PROJECT_ROOT / "findings_store.json"
 REMEDIATION_PATH = PROJECT_ROOT / "output" / "remediation.tf"
 ROLLBACKS_DIR = PROJECT_ROOT / "rollbacks"
 AUDIT_LOG_PATH = PROJECT_ROOT / "audit.log"
+REASONING_LOG_PATH = PROJECT_ROOT / "agent_reasoning.log"
 
 # ──────────────────────────────────────────────────────────────────────
 # Session state initialization
@@ -130,6 +132,15 @@ if "total_savings" not in st.session_state:
 
 if "last_saving_delta" not in st.session_state:
     st.session_state.last_saving_delta = None
+
+if "reasoning_last_agent" not in st.session_state:
+    st.session_state.reasoning_last_agent = None
+
+if "reasoning_events" not in st.session_state:
+    st.session_state.reasoning_events = []
+
+if "reasoning_line_count" not in st.session_state:
+    st.session_state.reasoning_line_count = 0
 
 # ──────────────────────────────────────────────────────────────────────
 # Helper functions
@@ -362,6 +373,11 @@ def _render_live_feed(statuses: dict[str, str]) -> None:
 
 if st.button("🚀 Execute Audit", type="primary", use_container_width=True):
     orch = st.session_state.orchestrator
+
+    # Requirement 10.5: Clear previous reasoning display when new audit starts
+    st.session_state.reasoning_events = []
+    st.session_state.reasoning_last_agent = None
+    st.session_state.reasoning_line_count = 0
 
     # Reset to idle
     statuses = {"finops": "idle", "secops": "idle", "remediation": "idle"}
@@ -626,6 +642,162 @@ with bottom_right:
                     st.text(line)
             else:
                 st.info("No audit entries yet. Execute an audit to generate trail.")
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Panel 5: Reasoning Log (full-width)
+# ──────────────────────────────────────────────────────────────────────
+
+# Color map for event types (Requirement 10.2)
+_REASONING_EVENT_COLORS = {
+    "check": "#9e9e9e",
+    "finding": "#ff9800",
+    "skip": "#bdbdbd",
+    "decision": "#2196f3",
+}
+
+
+def _parse_reasoning_log() -> list[dict]:
+    """Read agent_reasoning.log and parse JSONL, skipping malformed lines (Req 10.6)."""
+    if not REASONING_LOG_PATH.exists():
+        return []
+    events = []
+    try:
+        with open(REASONING_LOG_PATH, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    event = json.loads(line)
+                    events.append(event)
+                except (json.JSONDecodeError, ValueError):
+                    # Requirement 10.6: skip malformed lines silently
+                    continue
+    except IOError:
+        return []
+    return events
+
+
+def _render_reasoning_events(events: list[dict]) -> str:
+    """Render reasoning events as color-coded HTML with section headers (Req 10.2, 10.3)."""
+    if not events:
+        return ""
+
+    html_parts: list[str] = []
+    last_agent = None
+
+    for event in events:
+        agent = event.get("agent", "unknown")
+        event_type = event.get("event_type", "")
+        message = event.get("message", "")
+        resource_id = event.get("resource_id", "")
+        timestamp = event.get("timestamp", "")
+
+        # Requirement 10.3: Insert section header when agent changes
+        if agent != last_agent:
+            header_html = (
+                f'<div style="margin-top:12px;margin-bottom:4px;padding:4px 8px;'
+                f'background:#e3f2fd;border-radius:4px;font-weight:700;font-size:0.9rem;">'
+                f'🤖 {agent}'
+                f'</div>'
+            )
+            html_parts.append(header_html)
+            last_agent = agent
+
+        # Requirement 10.2: Color-code by event type
+        if event_type == "handoff":
+            # Handoff renders in bold
+            style = "font-weight:bold;color:#333;"
+        else:
+            color = _REASONING_EVENT_COLORS.get(event_type, "#9e9e9e")
+            style = f"color:{color};"
+
+        # Format the timestamp for display
+        ts_display = timestamp[:19] if timestamp else ""
+
+        # Resource tag
+        resource_tag = f" <code>{resource_id}</code>" if resource_id else ""
+
+        event_html = (
+            f'<div style="padding:3px 8px;margin:2px 0;font-size:0.85rem;'
+            f'font-family:monospace;border-left:3px solid '
+            f'{_REASONING_EVENT_COLORS.get(event_type, "#666")};{style}">'
+            f'<span style="color:#888;font-size:0.75rem;">{ts_display}</span> '
+            f'<strong>[{event_type}]</strong>{resource_tag} {message}'
+            f'</div>'
+        )
+        html_parts.append(event_html)
+
+    return "".join(html_parts)
+
+
+def _check_streamlit_version_supports_fragment() -> bool:
+    """Check if current Streamlit version supports @st.fragment(run_every=...)."""
+    try:
+        version = st.__version__
+        parts = version.split(".")
+        major = int(parts[0])
+        minor = int(parts[1]) if len(parts) > 1 else 0
+        # st.fragment(run_every=...) is available in Streamlit >= 1.33
+        return (major > 1) or (major == 1 and minor >= 33)
+    except (AttributeError, ValueError, IndexError):
+        return False
+
+
+_USE_FRAGMENT = _check_streamlit_version_supports_fragment()
+
+st.divider()
+st.subheader("🧠 Agent Reasoning Log")
+
+if _USE_FRAGMENT:
+    # Streamlit >= 1.33: Use @st.fragment(run_every=1) for isolated polling (Req 10.1)
+    @st.fragment(run_every=1)
+    def reasoning_log_panel():
+        """Poll agent_reasoning.log and render color-coded events."""
+        events = _parse_reasoning_log()
+
+        # Requirement 10.5: Clear previous display when new audit starts
+        # (Handled by the log truncation in orchestrator — when file is truncated,
+        # events list will be empty/fresh on next poll)
+
+        with st.container(border=True):
+            if not events:
+                st.info("No reasoning events yet. Execute an audit to see agent decisions.")
+            else:
+                html_content = _render_reasoning_events(events)
+                # Requirement 10.4: Auto-scroll via container with overflow
+                scroll_html = (
+                    '<div id="reasoning-log-container" style="max-height:400px;overflow-y:auto;'
+                    'padding:4px;">'
+                    + html_content
+                    + '</div>'
+                    '<script>var el=document.getElementById("reasoning-log-container");'
+                    'if(el){el.scrollTop=el.scrollHeight;}</script>'
+                )
+                st.markdown(scroll_html, unsafe_allow_html=True)
+                st.caption(f"Total events: {len(events)}")
+
+    reasoning_log_panel()
+else:
+    # Streamlit < 1.33 fallback: Use session_state polling (Req 10.1)
+    with st.container(border=True):
+        events = _parse_reasoning_log()
+
+        if not events:
+            st.info("No reasoning events yet. Execute an audit to see agent decisions.")
+        else:
+            html_content = _render_reasoning_events(events)
+            scroll_html = (
+                '<div id="reasoning-log-container" style="max-height:400px;overflow-y:auto;'
+                'padding:4px;">'
+                + html_content
+                + '</div>'
+                '<script>var el=document.getElementById("reasoning-log-container");'
+                'if(el){el.scrollTop=el.scrollHeight;}</script>'
+            )
+            st.markdown(scroll_html, unsafe_allow_html=True)
+            st.caption(f"Total events: {len(events)}")
 
 
 # ──────────────────────────────────────────────────────────────────────

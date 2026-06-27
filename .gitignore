@@ -20,6 +20,8 @@ venv/
 # Runtime outputs
 audit.log
 findings_store.json
+savings_ledger.json
+agent_reasoning.log
 rollbacks/*
 !rollbacks/.gitkeep
 

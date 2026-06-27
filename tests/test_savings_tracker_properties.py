@@ -5,6 +5,7 @@ randomly generated inputs.
 """
 
 import json
+import math
 import tempfile
 from pathlib import Path
 
@@ -192,7 +193,8 @@ def test_monthly_savings_computation(scan_id, completed_at, findings, data):
         )
 
         # Verify monthly_savings_added equals the expected sum
-        assert abs(entry["monthly_savings_added"] - expected_savings) < 1e-9, (
+        # Use relative tolerance to handle floating-point precision with large sums
+        assert math.isclose(entry["monthly_savings_added"], expected_savings, rel_tol=1e-9, abs_tol=1e-9), (
             f"Expected {expected_savings}, got {entry['monthly_savings_added']}"
         )
 

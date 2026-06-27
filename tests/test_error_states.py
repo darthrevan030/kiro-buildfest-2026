@@ -314,7 +314,11 @@ class TestTerraformValidateFails:
 
         # Attempting to approve after hook failure should fail
         # The plans are stored but the audit failed — approval should not proceed
-        approval = orch.approve("APPROVE vol-err001")
+        with patch("orchestrator.subprocess.run") as mock_apply:
+            mock_apply.return_value = subprocess.CompletedProcess(
+                args=[], returncode=1, stdout="", stderr="tflocal: not available"
+            )
+            approval = orch.approve("APPROVE vol-err001")
         # The plan exists in _last_plans but the orchestrator should still let
         # the gate process it — however the workflow means the UI should block.
         # At minimum, the AuditResult signals the failure.

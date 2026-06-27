@@ -33,8 +33,10 @@ from agents.approval_gate import (
 )
 from agents.audit_logger import AuditLogger
 from agents.finops_auditor import FinOpsAuditor
+from agents.reasoning_logger import ReasoningLogger
 from agents.remediation_architect import RemediationArchitect, RemediationPlan
 from agents.secops_guard import SecOpsGuard
+from savings import SavingsTracker
 
 
 PROJECT_ROOT = Path(__file__).parent
@@ -85,6 +87,7 @@ class ApprovalResult:
 
     success: bool
     resource_id: str = ""
+    message: str | None = None
     error: str | None = None
     locked: bool = False
     expected_format: str | None = None
@@ -128,13 +131,25 @@ class Orchestrator:
         self.audit_log_path = self.project_root / "audit.log"
         self.approver = approver
 
+        # Reasoning logger (shared across all agents)
+        self._reasoning_logger = ReasoningLogger(
+            log_path=self.project_root / "agent_reasoning.log"
+        )
+
         # Agent instances
-        self._finops = FinOpsAuditor(findings_store_path=self.findings_store_path)
-        self._secops = SecOpsGuard(findings_store_path=self.findings_store_path)
+        self._finops = FinOpsAuditor(
+            findings_store_path=self.findings_store_path,
+            reasoning_logger=self._reasoning_logger,
+        )
+        self._secops = SecOpsGuard(
+            findings_store_path=self.findings_store_path,
+            reasoning_logger=self._reasoning_logger,
+        )
         self._architect = RemediationArchitect(
             findings_store_path=self.findings_store_path,
             output_dir=self.output_dir,
             rollbacks_dir=self.rollbacks_dir,
+            reasoning_logger=self._reasoning_logger,
         )
 
         # Audit logger (append-only, file-based)
@@ -145,6 +160,11 @@ class Orchestrator:
 
         # Internal audit trail
         self._audit_trail: list[AuditEntry] = []
+
+        # Savings tracker
+        self._savings_tracker = SavingsTracker(
+            findings_store_path=self.findings_store_path,
+        )
 
         # Track last plans for approval flow
         self._last_plans: list[RemediationPlan] = []
@@ -163,6 +183,9 @@ class Orchestrator:
         Returns:
             AuditResult with findings, plans, and any errors.
         """
+        # Truncate reasoning log at start of each new audit run
+        self._reasoning_logger.truncate()
+
         # Step 1: FinOps Auditor scan
         self._log_action("scan", "all", "started", "FinOps Auditor scan initiated")
         finops_findings = self._finops.scan()
@@ -280,10 +303,36 @@ class Orchestrator:
 
         # Approval valid — execute remediation (log action)
         self._log_action("approval", resource_id, "success", f"Approved by {self.approver}")
+
+        # Run tflocal apply -auto-approve against the output directory
+        apply_result = subprocess.run(
+            ["tflocal", "apply", "-auto-approve"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            cwd=str(self.project_root / "output"),
+        )
+        if apply_result.returncode != 0:
+            error = apply_result.stderr.strip() or apply_result.stdout.strip()
+            return ApprovalResult(
+                success=False,
+                message=f"tflocal apply failed: {error}",
+                resource_id=plan.resource_id,
+            )
+
         self._log_action("execution", resource_id, "success", "Remediation executed")
 
         # Run post-remediation hook
         self._run_post_remediation_hook(resource_id, "remediate", "success")
+
+        # Record savings (non-blocking — errors are logged but don't fail approval)
+        try:
+            self._savings_tracker.record_run(resources_remediated=[resource_id])
+        except (FileNotFoundError, OSError) as e:
+            self._log_action(
+                "savings", resource_id, "warning",
+                f"Savings tracker failed: {e}"
+            )
 
         return ApprovalResult(success=True, resource_id=resource_id)
 

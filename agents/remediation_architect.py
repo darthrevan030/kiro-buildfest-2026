@@ -18,7 +18,10 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from agents.reasoning_logger import ReasoningLogger
 
 # Import MCP tools directly (same process, no network transport needed)
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -83,10 +86,17 @@ class RemediationArchitect:
         findings_store_path: Path | None = None,
         output_dir: Path | None = None,
         rollbacks_dir: Path | None = None,
+        reasoning_logger: "ReasoningLogger | None" = None,
     ):
         self.findings_store_path = findings_store_path or FINDINGS_STORE_PATH
         self.output_dir = output_dir or OUTPUT_DIR
         self.rollbacks_dir = rollbacks_dir or ROLLBACKS_DIR
+        self._logger = reasoning_logger
+
+    def _emit(self, event_type: str, resource_id: str, message: str) -> None:
+        """Emit a reasoning event if a logger is configured."""
+        if self._logger is not None:
+            self._logger.emit("remediation_architect", event_type, resource_id, message)
 
     def check_resource_dependencies(self, finding: dict) -> DependencyReport:
         """
@@ -99,6 +109,7 @@ class RemediationArchitect:
             DependencyReport with dependency status and recommendation.
         """
         resource_id = finding["resource_id"]
+        self._emit("check", resource_id, f"Checking dependencies for {resource_id}")
         result = check_dependencies(resource_id=resource_id)
 
         has_deps = result.get("has_dependencies", False)
@@ -112,6 +123,8 @@ class RemediationArchitect:
             )
         else:
             recommendation = f"CLEAR: No dependencies found for {resource_id}. Safe to remediate."
+
+        self._emit("decision", resource_id, recommendation)
 
         return DependencyReport(
             resource_id=resource_id,
@@ -192,6 +205,8 @@ class RemediationArchitect:
         if findings is None:
             findings = self._load_findings()
 
+        self._emit("check", "", f"Starting remediation planning for {len(findings)} finding(s)")
+
         # Ensure output directories exist
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.rollbacks_dir.mkdir(parents=True, exist_ok=True)
@@ -222,6 +237,8 @@ class RemediationArchitect:
             remediation_hcl = self.generate_remediation(finding)
             rollback_hcl = self.generate_rollback(finding)
 
+            self._emit("decision", resource_id, f"Generated remediation and rollback HCL for {resource_id}")
+
             plan = RemediationPlan(
                 resource_id=resource_id,
                 finding=finding,
@@ -242,6 +259,12 @@ class RemediationArchitect:
             combined_remediation = "\n\n".join(remediation_parts)
             remediation_path = self.output_dir / "remediation.tf"
             remediation_path.write_text(combined_remediation)
+
+        self._emit(
+            "handoff", "",
+            f"Remediation planning complete: {len([p for p in plans if not p.blocked])} remediated, "
+            f"{len([p for p in plans if p.blocked])} blocked"
+        )
 
         return plans
 

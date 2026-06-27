@@ -208,9 +208,13 @@ class TestHappyPath:
             assert approval.success is True
             assert approval.resource_id == "vol-abc123"
 
-            # Pre-remediation (1st call) + post-remediation (2nd call)
-            assert mock_run.call_count == 2
-            post_call_args = mock_run.call_args_list[1][0][0]
+            # Pre-remediation (1st) + tflocal apply (2nd) + post-remediation (3rd)
+            assert mock_run.call_count == 3
+            # 2nd call is tflocal apply -auto-approve
+            apply_call_args = mock_run.call_args_list[1][0][0]
+            assert apply_call_args == ["tflocal", "apply", "-auto-approve"]
+            # 3rd call is post-remediation hook
+            post_call_args = mock_run.call_args_list[2][0][0]
             assert "post-remediation.sh" in post_call_args[1]
             assert "vol-abc123" in post_call_args
             assert "remediate" in post_call_args
@@ -382,12 +386,13 @@ class TestPostRemediationHook:
 
         def side_effect(*args, **kwargs):
             call_count[0] += 1
-            if call_count[0] == 1:
-                # Pre-remediation hook passes
+            if call_count[0] <= 2:
+                # Call 1: Pre-remediation hook passes
+                # Call 2: tflocal apply passes
                 return subprocess.CompletedProcess(
                     args=[], returncode=0, stdout="", stderr=""
                 )
-            # Post-remediation hook explodes
+            # Call 3: Post-remediation hook explodes
             raise OSError("disk full")
 
         with patch("orchestrator.subprocess.run", side_effect=side_effect):
