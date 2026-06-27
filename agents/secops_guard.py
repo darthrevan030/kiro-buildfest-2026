@@ -12,19 +12,19 @@ Usage:
     python -m agents.secops_guard
 """
 
-from __future__ import annotations
-
 import json
 import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 # Import MCP tool directly (no network transport needed for demo)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from mcp_server.aws_janitor_mcp import get_security_data
 
-from agents.reasoning_logger import ReasoningLogger
+if TYPE_CHECKING:
+    from agents.reasoning_logger import ReasoningLogger
 
 
 # Sensitive ports that must be VPC-only (never open to 0.0.0.0/0)
@@ -50,10 +50,15 @@ class SecOpsGuard:
     def __init__(
         self,
         findings_store_path: Path | None = None,
-        reasoning_logger: ReasoningLogger | None = None,
+        reasoning_logger: "ReasoningLogger | None" = None,
     ):
         self.findings_store_path = findings_store_path or FINDINGS_STORE_PATH
-        self._logger = reasoning_logger or ReasoningLogger()
+        self._logger = reasoning_logger
+
+    def _emit(self, event_type: str, resource_id: str, message: str) -> None:
+        """Emit a reasoning log event if a logger is configured."""
+        if self._logger:
+            self._logger.emit("secops_guard", event_type, resource_id, message)
 
     def scan(self) -> list[dict]:
         """
@@ -62,30 +67,31 @@ class SecOpsGuard:
         Returns:
             List of all security findings detected.
         """
-        self._logger.emit(
-            "secops_guard", "check", "",
-            "Starting security audit: checking security groups and encryption",
-        )
+        self._emit("check", "", "Starting SecOps Guard security scan")
 
         findings: list[dict] = []
 
         # Check security groups for open sensitive ports
+        self._emit("check", "", "Checking security groups for open sensitive ports")
         sg_findings = self.check_security_groups()
         findings.extend(sg_findings)
 
         # Check encryption for ElastiCache and EBS
+        self._emit("check", "", "Checking ElastiCache encryption at rest")
         enc_findings_cache = self.check_encryption("elasticache")
         findings.extend(enc_findings_cache)
 
+        self._emit("check", "", "Checking EBS encryption at rest")
         enc_findings_ebs = self.check_encryption("ebs")
         findings.extend(enc_findings_ebs)
 
         # Append to findings_store.json
         self._append_findings_to_store(findings)
 
-        self._logger.emit(
-            "secops_guard", "handoff", "",
-            f"Security audit complete: {len(findings)} finding(s) detected",
+        self._emit(
+            "handoff",
+            "",
+            f"SecOps Guard scan complete. {len(findings)} finding(s) detected.",
         )
 
         return findings
@@ -109,20 +115,16 @@ class SecOpsGuard:
         for raw in raw_findings:
             port = raw.get("port", 0)
             cidr = raw.get("cidr", "")
-            resource_id = raw.get("resource_id", "unknown")
-
-            self._logger.emit(
-                "secops_guard", "check", resource_id,
-                f"Checking security group {resource_id}: port={port}, cidr={cidr}",
-            )
+            resource_id = raw.get("resource_id", "")
 
             # Only flag if open to 0.0.0.0/0 on a sensitive port
             if cidr == "0.0.0.0/0" and port in SENSITIVE_PORTS:
                 finding = self._build_finding(raw)
                 findings.append(finding)
-                self._logger.emit(
-                    "secops_guard", "finding", resource_id,
-                    f"Violation: {resource_id} open to 0.0.0.0/0 on port {port}",
+                self._emit(
+                    "finding",
+                    resource_id,
+                    f"Security group open to 0.0.0.0/0 on port {port}",
                 )
 
         return findings
@@ -147,22 +149,18 @@ class SecOpsGuard:
 
         for raw in raw_findings:
             encryption_at_rest = raw.get("encryption_at_rest", True)
-            resource_id = raw.get("resource_id", "unknown")
 
             # Only flag if encryption is not enabled
             if not encryption_at_rest:
                 # Filter by resource_type
                 detected_type = self._determine_resource_type(raw)
                 if detected_type == resource_type:
-                    self._logger.emit(
-                        "secops_guard", "check", resource_id,
-                        f"Checking encryption for {resource_type} resource {resource_id}",
-                    )
                     finding = self._build_finding(raw)
                     findings.append(finding)
-                    self._logger.emit(
-                        "secops_guard", "finding", resource_id,
-                        f"Violation: {resource_id} lacks encryption at rest",
+                    self._emit(
+                        "finding",
+                        raw.get("resource_id", ""),
+                        f"Unencrypted {resource_type} resource detected",
                     )
 
         return findings

@@ -10,8 +10,6 @@ Usage:
     python -m agents.finops_auditor
 """
 
-from __future__ import annotations
-
 import json
 import sys
 import uuid
@@ -34,9 +32,11 @@ class FinOpsAuditor:
     """
     FinOps Auditor agent — detects idle resources representing financial waste.
 
-    Calls MCP get_cost_data() with min_idle_days=30 to retrieve resources that have
-    been idle for over 30 days, classifies severity, estimates cost, and writes
+    Calls MCP get_cost_data() to retrieve all resources, then filters locally
+    for those idle over 30 days. Classifies severity, estimates cost, and writes
     findings to findings_store.json.
+
+    Emits structured reasoning events via ReasoningLogger at each decision point.
     """
 
     MIN_IDLE_DAYS = 30
@@ -125,59 +125,74 @@ class FinOpsAuditor:
         Execute the FinOps audit scan.
 
         1. Calls MCP get_cost_data() to retrieve all resources
-        2. For each resource, checks idle threshold and emits reasoning events
-        3. Builds Finding dicts for resources idle > 30 days
+        2. For each resource, checks idle duration against threshold
+        3. Emits reasoning events: check at start, per-resource check/finding/skip
         4. Writes findings_store.json
+        5. Emits handoff event at scan complete
 
         Returns:
             List of Finding dicts for resources idle > 30 days.
         """
+        # Emit check event at scan start
         self._logger.emit(
-            "finops_auditor", "check", "",
-            f"Starting FinOps audit scan with {self.MIN_IDLE_DAYS}-day idle threshold",
+            "finops_auditor",
+            "check",
+            "",
+            f"Starting FinOps audit scan — filtering for resources idle > {self.MIN_IDLE_DAYS} days",
         )
 
-        # Fetch all resources (min_idle_days=0) so we can emit skip events
-        # for those below our remediation threshold
-        all_cost_data = get_cost_data(resource_type=None, min_idle_days=0)
+        # Call MCP tool without min_idle_days filter so we can emit skip/finding per resource
+        cost_data = get_cost_data(resource_type=None, min_idle_days=0)
 
-        if "error" in all_cost_data:
-            print(f"[FinOps Auditor] ERROR: {all_cost_data['error']}", file=sys.stderr)
+        if "error" in cost_data:
+            print(f"[FinOps Auditor] ERROR: {cost_data['error']}", file=sys.stderr)
             return []
 
-        all_resources = all_cost_data.get("resources", [])
-
-        findings: list[dict] = []
+        all_resources = cost_data.get("resources", [])
+        findings = []
 
         for resource in all_resources:
             resource_id = resource.get("id", "unknown")
             idle_days = resource.get("idle_days", 0)
 
+            # Emit check event per resource
             self._logger.emit(
-                "finops_auditor", "check", resource_id,
-                f"Checking resource {resource_id}: idle_days={idle_days}, type={resource.get('type', 'unknown')}",
+                "finops_auditor",
+                "check",
+                resource_id,
+                f"Checking {resource.get('type', 'unknown')} resource idle duration: {idle_days} days",
             )
 
-            if idle_days >= self.MIN_IDLE_DAYS:
+            if idle_days > self.MIN_IDLE_DAYS:
+                # Resource exceeds threshold — build finding and emit finding event
                 finding = self._build_finding(resource)
                 findings.append(finding)
                 self._logger.emit(
-                    "finops_auditor", "finding", resource_id,
-                    f"Flagged {resource.get('type', 'unknown')} resource {resource_id}: "
-                    f"idle {idle_days} days, estimated ${resource.get('monthly_cost', 0.0):.2f}/mo",
+                    "finops_auditor",
+                    "finding",
+                    resource_id,
+                    f"Flagged: {resource.get('type', 'unknown')} idle {idle_days} days "
+                    f"(threshold {self.MIN_IDLE_DAYS}d) — est. ${self.estimate_cost(resource)}/mo waste",
                 )
             else:
+                # Resource below threshold — emit skip event
                 self._logger.emit(
-                    "finops_auditor", "skip", resource_id,
-                    f"Resource {resource_id} below threshold: idle {idle_days} days < {self.MIN_IDLE_DAYS} days required",
+                    "finops_auditor",
+                    "skip",
+                    resource_id,
+                    f"Below threshold: {resource.get('type', 'unknown')} idle {idle_days} days "
+                    f"(< {self.MIN_IDLE_DAYS}d required)",
                 )
 
         # Write findings store
         self._write_findings_store(findings)
 
+        # Emit handoff event at scan complete
         self._logger.emit(
-            "finops_auditor", "handoff", "",
-            f"FinOps audit complete: {len(findings)} finding(s) from {len(all_resources)} resources scanned",
+            "finops_auditor",
+            "handoff",
+            "",
+            f"FinOps audit complete — {len(findings)} finding(s) from {len(all_resources)} resources scanned",
         )
 
         return findings

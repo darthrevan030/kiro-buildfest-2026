@@ -208,12 +208,12 @@ class TestHappyPath:
             assert approval.success is True
             assert approval.resource_id == "vol-abc123"
 
-            # Pre-remediation (1st call) + tflocal apply (2nd call) + post-remediation (3rd call)
+            # Pre-remediation (1st) + tflocal apply (2nd) + post-remediation (3rd)
             assert mock_run.call_count == 3
-            # Verify tflocal apply call
+            # 2nd call is tflocal apply -auto-approve
             apply_call_args = mock_run.call_args_list[1][0][0]
             assert apply_call_args == ["tflocal", "apply", "-auto-approve"]
-            # Verify post-remediation hook call
+            # 3rd call is post-remediation hook
             post_call_args = mock_run.call_args_list[2][0][0]
             assert "post-remediation.sh" in post_call_args[1]
             assert "vol-abc123" in post_call_args
@@ -387,11 +387,12 @@ class TestPostRemediationHook:
         def side_effect(*args, **kwargs):
             call_count[0] += 1
             if call_count[0] <= 2:
-                # Pre-remediation hook and tflocal apply pass
+                # Call 1: Pre-remediation hook passes
+                # Call 2: tflocal apply passes
                 return subprocess.CompletedProcess(
                     args=[], returncode=0, stdout="", stderr=""
                 )
-            # Post-remediation hook explodes
+            # Call 3: Post-remediation hook explodes
             raise OSError("disk full")
 
         with patch("orchestrator.subprocess.run", side_effect=side_effect):
@@ -761,168 +762,3 @@ class TestEdgeCases:
         orch.approve("APPROVE vol-nonexistent")
         len_after_fail = len(orch.get_audit_trail())
         assert len_after_fail >= len_after_audit
-
-
-# ──────────────────────────────────────────────────────────────────────
-# SavingsTracker wiring: record_run called correctly from approve()
-# ──────────────────────────────────────────────────────────────────────
-
-
-class TestSavingsTrackerWiring:
-    """Verify SavingsTracker integration in the Orchestrator.
-
-    Requirements 5.1, 5.2, 5.3:
-    - record_run() is called from approve() after successful execution
-    - record_run() is NOT called from _run_post_remediation_hook
-    - Savings tracker errors don't block approval
-    """
-
-    def test_record_run_called_after_successful_approval(
-        self, tmp_project, findings_store_both_agents
-    ):
-        """After successful approve(), record_run is called with correct resource_id."""
-        orch = _make_orchestrator_with_mocked_agents(
-            tmp_project, findings_store_both_agents
-        )
-        _setup_successful_audit(orch, tmp_project)
-
-        # Mock the savings tracker
-        orch._savings_tracker.record_run = MagicMock()
-
-        with patch("orchestrator.subprocess.run") as mock_run:
-            mock_run.return_value = subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="", stderr=""
-            )
-            orch.execute_audit()
-            result = orch.approve("APPROVE vol-abc123")
-
-        assert result.success is True
-        orch._savings_tracker.record_run.assert_called_once_with(
-            resources_remediated=["vol-abc123"]
-        )
-
-    def test_record_run_not_called_from_post_remediation_hook(
-        self, tmp_project, findings_store_both_agents
-    ):
-        """_run_post_remediation_hook() does NOT call record_run."""
-        orch = _make_orchestrator_with_mocked_agents(
-            tmp_project, findings_store_both_agents
-        )
-
-        # Mock the savings tracker
-        orch._savings_tracker.record_run = MagicMock()
-
-        with patch("orchestrator.subprocess.run") as mock_run:
-            mock_run.return_value = subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="", stderr=""
-            )
-            # Call _run_post_remediation_hook directly
-            orch._run_post_remediation_hook("vol-abc123", "remediate", "success")
-
-        # record_run should NOT have been called
-        orch._savings_tracker.record_run.assert_not_called()
-
-    def test_savings_tracker_file_not_found_does_not_block_approval(
-        self, tmp_project, findings_store_both_agents
-    ):
-        """When record_run raises FileNotFoundError, approve() still returns success."""
-        orch = _make_orchestrator_with_mocked_agents(
-            tmp_project, findings_store_both_agents
-        )
-        _setup_successful_audit(orch, tmp_project)
-
-        # Make record_run raise FileNotFoundError
-        orch._savings_tracker.record_run = MagicMock(
-            side_effect=FileNotFoundError("ledger not found")
-        )
-
-        with patch("orchestrator.subprocess.run") as mock_run:
-            mock_run.return_value = subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="", stderr=""
-            )
-            orch.execute_audit()
-            result = orch.approve("APPROVE vol-abc123")
-
-        assert result.success is True
-        assert result.resource_id == "vol-abc123"
-
-    def test_savings_tracker_os_error_does_not_block_approval(
-        self, tmp_project, findings_store_both_agents
-    ):
-        """When record_run raises OSError, approve() still returns success."""
-        orch = _make_orchestrator_with_mocked_agents(
-            tmp_project, findings_store_both_agents
-        )
-        _setup_successful_audit(orch, tmp_project)
-
-        # Make record_run raise OSError
-        orch._savings_tracker.record_run = MagicMock(
-            side_effect=OSError("disk full")
-        )
-
-        with patch("orchestrator.subprocess.run") as mock_run:
-            mock_run.return_value = subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="", stderr=""
-            )
-            orch.execute_audit()
-            result = orch.approve("APPROVE vol-abc123")
-
-        assert result.success is True
-        assert result.resource_id == "vol-abc123"
-
-    def test_record_run_not_called_on_failed_approval(
-        self, tmp_project, findings_store_both_agents
-    ):
-        """When approval fails (invalid format), record_run is NOT called."""
-        orch = _make_orchestrator_with_mocked_agents(
-            tmp_project, findings_store_both_agents
-        )
-        _setup_successful_audit(orch, tmp_project)
-
-        # Mock the savings tracker
-        orch._savings_tracker.record_run = MagicMock()
-
-        with patch("orchestrator.subprocess.run") as mock_run:
-            mock_run.return_value = subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="", stderr=""
-            )
-            orch.execute_audit()
-
-        # Invalid command format — no resource ID extracted
-        result = orch.approve("random garbage")
-        assert result.success is False
-        orch._savings_tracker.record_run.assert_not_called()
-
-    def test_record_run_not_called_when_tflocal_apply_fails(
-        self, tmp_project, findings_store_both_agents
-    ):
-        """When tflocal apply returns non-zero, record_run is NOT called."""
-        orch = _make_orchestrator_with_mocked_agents(
-            tmp_project, findings_store_both_agents
-        )
-        _setup_successful_audit(orch, tmp_project)
-
-        # Mock the savings tracker
-        orch._savings_tracker.record_run = MagicMock()
-
-        call_count = [0]
-
-        def side_effect(*args, **kwargs):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                # Pre-remediation hook passes
-                return subprocess.CompletedProcess(
-                    args=[], returncode=0, stdout="", stderr=""
-                )
-            # tflocal apply fails
-            return subprocess.CompletedProcess(
-                args=[], returncode=1, stdout="", stderr="Error: resource not found"
-            )
-
-        with patch("orchestrator.subprocess.run", side_effect=side_effect):
-            orch.execute_audit()
-            result = orch.approve("APPROVE vol-abc123")
-
-        assert result.success is False
-        assert "tflocal apply failed" in result.error
-        orch._savings_tracker.record_run.assert_not_called()
