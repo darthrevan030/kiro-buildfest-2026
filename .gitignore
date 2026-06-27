@@ -1,26 +1,27 @@
 # Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
 *.egg-info/
 dist/
 build/
-
-# Virtual environments
-venv/
 .venv/
-.env
 
 # Terraform
 .terraform/
 *.tfstate
 *.tfstate.backup
-.terraform.lock.hcl
+*.tfplan
 
-# Project runtime artifacts
+# Runtime outputs
 audit.log
 findings_store.json
-rollbacks/
 
-# Streamlit
-.streamlit/
+# IDE
+.vscode/settings.json
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
