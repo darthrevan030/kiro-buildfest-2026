@@ -88,6 +88,11 @@ st.markdown(
 st.title("☁️ Cloud Janitor Dashboard")
 
 # ──────────────────────────────────────────────────────────────────────
+# Savings Counter (displayed after session state is initialized below)
+# ──────────────────────────────────────────────────────────────────────
+savings_placeholder = st.empty()
+
+# ──────────────────────────────────────────────────────────────────────
 # Constants
 # ──────────────────────────────────────────────────────────────────────
 
@@ -119,6 +124,12 @@ if "approval_history" not in st.session_state:
 
 if "pending_rollback" not in st.session_state:
     st.session_state.pending_rollback = None
+
+if "total_savings" not in st.session_state:
+    st.session_state.total_savings = 0.0
+
+if "last_saving_delta" not in st.session_state:
+    st.session_state.last_saving_delta = None
 
 # ──────────────────────────────────────────────────────────────────────
 # Helper functions
@@ -299,6 +310,37 @@ def render_agent_feed_html(statuses: dict[str, str]) -> str:
     )
     return rows + pipeline
 
+
+# ──────────────────────────────────────────────────────────────────────
+# Render Savings Counter
+# ──────────────────────────────────────────────────────────────────────
+
+def _calculate_potential_savings() -> float:
+    """Sum cost_estimate_monthly from all loaded findings."""
+    findings = load_findings()
+    return sum(f.get("cost_estimate_monthly", 0.0) for f in findings)
+
+
+with savings_placeholder.container(border=True):
+    total_savings = st.session_state.total_savings
+    last_delta = st.session_state.last_saving_delta
+    potential_savings = _calculate_potential_savings()
+
+    savings_left, savings_right = st.columns(2)
+
+    with savings_left:
+        delta_str = f"+${last_delta:.2f}" if last_delta else None
+        st.metric(
+            label="Estimated Monthly Savings",
+            value=f"${total_savings:.2f}/mo",
+            delta=delta_str,
+        )
+
+    with savings_right:
+        st.metric(
+            label="Potential Savings",
+            value=f"${potential_savings:.2f}/mo",
+        )
 
 # ──────────────────────────────────────────────────────────────────────
 # Execute Audit button
@@ -669,6 +711,17 @@ if audit_result is not None and audit_result.plans:
                     orch = st.session_state.orchestrator
                     result = orch.approve(approval_input, resource_id=selected_resource)
                     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+                    # Track savings on successful approval
+                    if result.success and audit_result and audit_result.findings:
+                        approved_resource_id = result.resource_id or selected_resource
+                        for finding in audit_result.findings:
+                            if finding.get("resource_id") == approved_resource_id:
+                                cost = finding.get("cost_estimate_monthly", 0.0)
+                                if cost > 0:
+                                    st.session_state.total_savings += cost
+                                    st.session_state.last_saving_delta = cost
+                                break
 
                     st.session_state.approval_history.append({
                         "action": "approval",
