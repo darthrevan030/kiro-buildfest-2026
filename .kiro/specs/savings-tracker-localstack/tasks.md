@@ -73,7 +73,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - **Property 9: Reasoning logger sequential append**
     - **Validates: Requirements 9.6**
 
-- [ ] 3. Checkpoint
+- [x] 3. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 4. LocalStack wiring and demo infrastructure
