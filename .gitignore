@@ -6,16 +6,21 @@ __pycache__/
 dist/
 build/
 .venv/
+venv/
+.env
 
 # Terraform
 .terraform/
 *.tfstate
 *.tfstate.backup
+.terraform.lock.hcl
 *.tfplan
 
 # Runtime outputs
 audit.log
 findings_store.json
+rollbacks/*
+!rollbacks/.gitkeep
 
 # IDE
 .vscode/settings.json
