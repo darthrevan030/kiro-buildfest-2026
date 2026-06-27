@@ -119,3 +119,79 @@ def test_reasoning_logger_emits_valid_structured_json(agent, event_type, resourc
         # Timestamp is present and non-empty ISO 8601 with UTC
         assert len(entry["timestamp"]) > 0
         assert "+00:00" in entry["timestamp"]
+
+
+# --- Property 9: Reasoning logger sequential append ---
+# Feature: savings-tracker-localstack, Property 9: Reasoning logger sequential append
+
+
+@settings(max_examples=100)
+@given(
+    events=st.lists(
+        st.tuples(
+            agent_strategy,
+            event_type_strategy,
+            resource_id_strategy,
+            message_strategy,
+        ),
+        min_size=1,
+        max_size=50,
+    )
+)
+def test_reasoning_logger_sequential_append(events):
+    """
+    Property 9: Reasoning logger sequential append
+
+    For any sequence of N calls to emit() within a single run (after a single
+    truncate() call), the log file SHALL contain exactly N lines, and reading
+    them back in order SHALL yield the same sequence of (agent, event_type,
+    resource_id, message) tuples as the input sequence.
+
+    Covers truncation behavior: agent truncated to 64 chars, message to 500 chars,
+    invalid event_type becomes "unknown".
+
+    **Validates: Requirements 9.6**
+    """
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+        log_file = tmp_path / "reasoning.log"
+
+        logger = ReasoningLogger(log_path=log_file)
+        logger.truncate()
+
+        # Emit all events sequentially
+        for agent, event_type, resource_id, message in events:
+            logger.emit(agent, event_type, resource_id, message)
+
+        # Read back the log file
+        content = log_file.read_text(encoding="utf-8")
+        lines = content.splitlines()
+
+        # The log file must contain exactly N lines
+        assert len(lines) == len(events), (
+            f"Expected {len(events)} lines, got {len(lines)}"
+        )
+
+        # Each line must decode to the expected tuple (with truncation applied)
+        for i, (agent, event_type, resource_id, message) in enumerate(events):
+            entry = json.loads(lines[i])
+
+            # Apply expected truncation/validation
+            expected_agent = agent[:64]
+            expected_message = message[:500]
+            expected_event_type = (
+                event_type if event_type in ReasoningLogger.VALID_EVENT_TYPES else "unknown"
+            )
+
+            assert entry["agent"] == expected_agent, (
+                f"Line {i}: agent mismatch"
+            )
+            assert entry["event_type"] == expected_event_type, (
+                f"Line {i}: event_type mismatch"
+            )
+            assert entry["resource_id"] == resource_id, (
+                f"Line {i}: resource_id mismatch"
+            )
+            assert entry["message"] == expected_message, (
+                f"Line {i}: message mismatch"
+            )
