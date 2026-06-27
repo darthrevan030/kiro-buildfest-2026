@@ -80,7 +80,7 @@ def get_security_data(check_type: Optional[str] = None) -> dict:
 @mcp.tool()
 def validate_hcl(hcl_content: str) -> dict:
     """
-    Validates Terraform HCL by writing to a temp file and running terraform validate.
+    Validates Terraform HCL by writing to a temp file and running tflocal validate.
 
     Args:
         hcl_content: Raw HCL/Terraform configuration string to validate.
@@ -93,19 +93,19 @@ def validate_hcl(hcl_content: str) -> dict:
         with open(hcl_path, "w") as f:
             f.write(hcl_content)
 
-        # terraform init is required before validate in most cases
+        # tflocal init is required before validate in most cases
         init_result = subprocess.run(
-            ["terraform", "init", "-backend=false"],
+            ["tflocal", "init", "-backend=false"],
             cwd=tmpdir,
             capture_output=True,
             text=True,
         )
 
         if init_result.returncode != 0:
-            return {"valid": False, "error": f"terraform init failed: {init_result.stderr.strip()}"}
+            return {"valid": False, "error": f"tflocal init failed: {init_result.stderr.strip()}"}
 
         result = subprocess.run(
-            ["terraform", "validate"],
+            ["tflocal", "validate"],
             cwd=tmpdir,
             capture_output=True,
             text=True,
