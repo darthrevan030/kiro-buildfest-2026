@@ -367,3 +367,91 @@ def test_duplicate_run_idempotency(scan_id, completed_at, findings, data):
         # Verify the runs array length is still 1
         ledger_after_dup = json.loads(ledger_path.read_text(encoding="utf-8"))
         assert len(ledger_after_dup["runs"]) == 1
+
+
+# --- Property 5: Savings summary correctness ---
+# Feature: savings-tracker-localstack, Property 5: Savings summary correctness
+
+# Strategy for generating a list of RunEntry dicts (1-20 entries)
+run_entry_strategy = st.fixed_dictionaries({
+    "run_id": scan_id_strategy,
+    "timestamp": completed_at_strategy,
+    "resources_remediated": st.lists(
+        st.text(min_size=1, max_size=30, alphabet=st.characters(
+            whitelist_categories=("L", "N"),
+        )),
+        min_size=1,
+        max_size=5,
+    ),
+    "monthly_savings_added": st.floats(min_value=0.0, max_value=1e6, allow_nan=False, allow_infinity=False),
+    "cumulative_at_time": st.floats(min_value=0.0, max_value=1e7, allow_nan=False, allow_infinity=False),
+})
+
+runs_strategy = st.lists(
+    run_entry_strategy,
+    min_size=1,
+    max_size=20,
+    unique_by=lambda x: x["run_id"],
+)
+
+
+@settings(max_examples=100)
+@given(runs=runs_strategy)
+def test_savings_summary_correctness(runs):
+    """
+    Property 5: Savings summary correctness
+
+    For any ledger state with N >= 1 runs, get_savings_summary() SHALL return
+    a dictionary where:
+    - total_lifetime_annual equals total_lifetime_monthly * 12
+    - total_runs equals the number of entries in the runs array
+    - last_run_savings equals the monthly_savings_added value of the most
+      recent (last) RunEntry
+
+    **Validates: Requirements 4.1, 4.2, 4.4**
+    """
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+
+        # Compute total_lifetime_savings as sum of all monthly_savings_added
+        total_lifetime_savings = sum(r["monthly_savings_added"] for r in runs)
+
+        # Write ledger directly to disk
+        ledger = {
+            "total_lifetime_savings": total_lifetime_savings,
+            "runs": runs,
+        }
+        ledger_path = tmp_path / "savings_ledger.json"
+        ledger_path.write_text(json.dumps(ledger), encoding="utf-8")
+
+        # findings_store.json not needed for get_savings_summary(), but provide
+        # a valid path to satisfy the constructor
+        findings_path = tmp_path / "findings_store.json"
+        findings_path.write_text(json.dumps({"scan_id": "", "completed_at": "", "findings": []}), encoding="utf-8")
+
+        # Create tracker and get summary
+        tracker = SavingsTracker(ledger_path=ledger_path, findings_store_path=findings_path)
+        summary = tracker.get_savings_summary()
+
+        # Verify required keys exist
+        assert "total_lifetime_monthly" in summary
+        assert "total_lifetime_annual" in summary
+        assert "total_runs" in summary
+        assert "last_run_savings" in summary
+
+        # Property: total_lifetime_annual == total_lifetime_monthly * 12
+        assert abs(summary["total_lifetime_annual"] - summary["total_lifetime_monthly"] * 12) < 1e-9, (
+            f"Annual {summary['total_lifetime_annual']} != monthly {summary['total_lifetime_monthly']} * 12"
+        )
+
+        # Property: total_runs == number of entries in runs array
+        assert summary["total_runs"] == len(runs), (
+            f"total_runs {summary['total_runs']} != len(runs) {len(runs)}"
+        )
+
+        # Property: last_run_savings == monthly_savings_added of the last RunEntry
+        expected_last_run_savings = runs[-1]["monthly_savings_added"]
+        assert abs(summary["last_run_savings"] - expected_last_run_savings) < 1e-9, (
+            f"last_run_savings {summary['last_run_savings']} != "
+            f"last entry monthly_savings_added {expected_last_run_savings}"
+        )
