@@ -45,7 +45,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - On filesystem errors: print to stderr, do NOT raise
     - _Requirements: 9.4, 9.5, 9.6, 9.7_
 
-  - [ ] 2.2 Integrate ReasoningLogger into FinOps Auditor
+  - [x] 2.2 Integrate ReasoningLogger into FinOps Auditor
     - Add `emit("finops_auditor", "check", ...)` at scan start and per-resource check
     - Add `emit("finops_auditor", "finding", ...)` per flagged resource
     - Add `emit("finops_auditor", "skip", ...)` per resource below threshold
