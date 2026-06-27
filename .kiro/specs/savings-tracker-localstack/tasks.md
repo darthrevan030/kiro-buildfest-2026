@@ -159,7 +159,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
 - [x] 7. Checkpoint
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Implement SPEC_COMPLIANCE.md generator
+- [x] 8. Implement SPEC_COMPLIANCE.md generator
   - [x] 8.1 Create `generate_spec_compliance.py` at project root
     - Read and parse `.kiro/specs/tasks.md` for checkbox lines (`- [x]`, `- [ ]`, `- [-]`)
     - Implement keyword-to-file mapping table per requirements 8.3
@@ -177,7 +177,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - **Property 6: Compliance generator parsing and mapping**
     - **Validates: Requirements 8.2, 8.3**
 
-  - [ ] 8.4 Write property test: Compliance generator output format
+  - [x] 8.4 Write property test: Compliance generator output format
     - **Property 7: Compliance generator output format**
     - Verify output is a valid 4-column Markdown table with headers: `#`, `Task`, `Status`, `Artifact Verified`
     - **Validates: Requirements 8.4**

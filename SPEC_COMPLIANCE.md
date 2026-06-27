@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-27T16:20:43Z
+Generated: 2026-06-27T16:23:10Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -81,11 +81,11 @@ Generated: 2026-06-27T16:20:43Z
 | 75 | 6. Update .gitignore and project configuration | ✅ Done | no mapping |
 | 76 | 6.1 Add runtime files to `.gitignore` | ✅ Done | no mapping |
 | 77 | 7. Checkpoint | ✅ Done | no mapping |
-| 78 | 8. Implement SPEC_COMPLIANCE.md generator | ❌ Pending | — |
+| 78 | 8. Implement SPEC_COMPLIANCE.md generator | ✅ Done | no mapping |
 | 79 | 8.1 Create `generate_spec_compliance.py` at project root | ✅ Done | no mapping |
 | 80 | 8.2 Create Git post-commit hook | ✅ Done | no mapping |
 | 81 | 8.3 Write property test: Compliance generator parsing and mapping | ✅ Done | no mapping |
-| 82 | 8.4 Write property test: Compliance generator output format | ❌ Pending | — |
+| 82 | 8.4 Write property test: Compliance generator output format | ✅ Done | no mapping |
 | 83 | 9. Implement Streamlit Reasoning Panel | ❌ Pending | — |
 | 84 | 9.1 Add reasoning log panel to `app.py` | ❌ Pending | — |
 | 85 | 9.2 Write property test: Agent section header transitions | ❌ Pending | — |
