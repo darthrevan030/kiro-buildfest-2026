@@ -11,7 +11,7 @@ import pytest
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from generate_spec_compliance import parse_tasks, verify_artifact, KEYWORD_MAPPING
+from generate_spec_compliance import parse_tasks, verify_artifact, generate_report, KEYWORD_MAPPING
 
 
 # --- Strategies ---
@@ -234,3 +234,163 @@ def test_parse_tasks_handles_multiple_lines(markers_and_statuses):
         assert task["status"] == expected_status, (
             f"Task {i}: expected status '{expected_status}', got '{task['status']}'"
         )
+
+
+# --- Property 7: Compliance generator output format ---
+# Feature: savings-tracker-localstack, Property 7: Compliance generator output format
+
+# Strategy for generating a task status
+task_status_strategy = st.sampled_from(["done", "pending", "partial"])
+
+# Strategy for generating a task description (safe characters for table cells)
+task_description_strategy = st.text(
+    alphabet=st.characters(
+        whitelist_categories=("L", "N", "Zs"),
+        blacklist_characters=("\x00", "\n", "\r", "|"),
+    ),
+    min_size=1,
+    max_size=50,
+)
+
+# Strategy for generating a single task dict
+task_dict_strategy = st.builds(
+    lambda status, text: {"text": text, "status": status},
+    status=task_status_strategy,
+    description=task_description_strategy,
+)
+
+
+@settings(max_examples=100, deadline=None)
+@given(
+    tasks=st.lists(
+        st.fixed_dictionaries({
+            "text": task_description_strategy,
+            "status": task_status_strategy,
+        }),
+        min_size=1,
+        max_size=15,
+    ),
+)
+def test_generate_report_produces_valid_markdown_table(tasks):
+    """
+    Property 7: Compliance generator output format
+
+    For any set of parsed tasks (with varying checkbox states and artifact
+    existence results), the compliance generator output SHALL be a valid
+    Markdown table containing columns for task number, task description,
+    status indicator, and artifact verification result.
+
+    Validates:
+    - Output is a valid 4-column Markdown table
+    - Headers are exactly: #, Task, Status, Artifact Verified
+    - Each row has 4 columns
+    - Task numbering is sequential (1, 2, 3, ...)
+    - Status column shows correct indicators: ✅ Done, ❌ Pending, ⏳ Partial
+
+    **Validates: Requirements 8.4**
+    """
+    # Use a temp directory as project_root so verify_artifact can check paths
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        project_root = Path(tmp_dir)
+
+        # Generate the report
+        report = generate_report(tasks, project_root)
+
+        # Split into lines
+        lines = report.strip().split("\n")
+
+        # --- Validate report structure ---
+        # Must have at minimum: title, blank, generated date, blank, header, separator, 1+ data rows
+        assert len(lines) >= 6 + len(tasks), (
+            f"Report too short: expected at least {6 + len(tasks)} lines, got {len(lines)}"
+        )
+
+        # First line should be the title
+        assert lines[0] == "# Spec Compliance Report"
+
+        # Find the table header line
+        header_line = None
+        header_idx = None
+        for i, line in enumerate(lines):
+            if line.startswith("| # |"):
+                header_line = line
+                header_idx = i
+                break
+
+        assert header_line is not None, "Could not find table header '| # |' in report"
+
+        # --- Validate table header ---
+        header_cells = [cell.strip() for cell in header_line.split("|")]
+        # Split by | gives empty strings at start and end: ['', '#', 'Task', 'Status', 'Artifact Verified', '']
+        header_cells = [c for c in header_cells if c != ""]
+        assert header_cells == ["#", "Task", "Status", "Artifact Verified"], (
+            f"Expected headers ['#', 'Task', 'Status', 'Artifact Verified'], got {header_cells}"
+        )
+
+        # --- Validate separator line ---
+        separator_line = lines[header_idx + 1]
+        separator_cells = [cell.strip() for cell in separator_line.split("|")]
+        separator_cells = [c for c in separator_cells if c != ""]
+        assert len(separator_cells) == 4, (
+            f"Separator line should have 4 columns, got {len(separator_cells)}"
+        )
+        # Each cell in separator should be dashes only
+        for cell in separator_cells:
+            assert all(ch == "-" for ch in cell), (
+                f"Separator cell should be all dashes, got: '{cell}'"
+            )
+
+        # --- Validate data rows ---
+        data_rows = lines[header_idx + 2:]
+        # Filter out any trailing empty lines
+        data_rows = [row for row in data_rows if row.strip()]
+
+        assert len(data_rows) == len(tasks), (
+            f"Expected {len(tasks)} data rows, got {len(data_rows)}"
+        )
+
+        # Valid status indicators
+        valid_statuses = {"✅ Done", "❌ Pending", "⏳ Partial"}
+        status_for_state = {
+            "done": "✅ Done",
+            "pending": "❌ Pending",
+            "partial": "⏳ Partial",
+        }
+
+        for i, row in enumerate(data_rows):
+            # Each row should start and end with |
+            assert row.startswith("|") and row.endswith("|"), (
+                f"Row {i} does not start/end with '|': '{row}'"
+            )
+
+            # Split into cells
+            cells = [cell.strip() for cell in row.split("|")]
+            cells = [c for c in cells if c != ""]
+
+            # Must have exactly 4 columns
+            assert len(cells) == 4, (
+                f"Row {i} should have 4 columns, got {len(cells)}: {cells}"
+            )
+
+            # Column 1: sequential task number
+            expected_num = str(i + 1)
+            assert cells[0] == expected_num, (
+                f"Row {i}: expected task number '{expected_num}', got '{cells[0]}'"
+            )
+
+            # Column 3: valid status indicator matching the task's status
+            assert cells[2] in valid_statuses, (
+                f"Row {i}: status '{cells[2]}' not in valid set {valid_statuses}"
+            )
+
+            # Verify the status matches what we expect for this task
+            expected_status_display = status_for_state[tasks[i]["status"]]
+            assert cells[2] == expected_status_display, (
+                f"Row {i}: task has status '{tasks[i]['status']}', "
+                f"expected display '{expected_status_display}', got '{cells[2]}'"
+            )
+
+            # Column 4: artifact verification (should be a non-empty string)
+            assert len(cells[3]) > 0, (
+                f"Row {i}: artifact verification column should not be empty"
+            )
