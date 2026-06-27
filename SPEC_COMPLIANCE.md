@@ -1,12 +1,12 @@
 # Spec Compliance Report
 
-Generated: 2026-06-27T14:46:22Z
+Generated: 2026-06-27T14:48:31Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
 | 1 | 1. Create .kiro/ directory structure and commit | ✅ Done | no mapping |
-| 2 | 2. Write requirements.md with all user stories | ✅ Done | .kiro/specs/requirements.md missing |
-| 3 | 3. Write design.md with architecture + data flow | ✅ Done | .kiro/specs/design.md missing |
+| 2 | 2. Write requirements.md with all user stories | ✅ Done | .kiro\specs\cloud-janitor\requirements.md exists |
+| 3 | 3. Write design.md with architecture + data flow | ✅ Done | .kiro\specs\cloud-janitor\design.md exists |
 | 4 | 4. Write fixture JSON for Cost Explorer (3 resources, 2 flaggable) | ✅ Done | fixtures/ exists |
 | 5 | 5. Write fixture JSON for Config/Inspector (2 security findings) | ✅ Done | fixtures/ exists |
 | 6 | 1. Implement aws_janitor_mcp.py with MCP protocol | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
@@ -37,3 +37,19 @@ Generated: 2026-06-27T14:46:22Z
 | 31 | 4. Rehearse 6-min demo script 3x | ❌ Pending | — |
 | 32 | 5. Record demo video for Devpost submission | ❌ Pending | — |
 | 33 | 6. Write Devpost submission copy | ❌ Pending | — |
+| 34 | 1. Create the backends module with CloudProvider ABC | ❌ Pending | — |
+| 35 | 2. Implement stub providers | ❌ Pending | — |
+| 36 | 3. Wire provider selection into MCP server | ❌ Pending | — |
+| 37 | 4. Checkpoint - Verify backward compatibility | ❌ Pending | — |
+| 38 | 6. Update dependencies and documentation | ❌ Pending | — |
+| 39 | 7. Final checkpoint - Ensure all tests pass | ❌ Pending | — |
+| 40 | 1. Implement Savings Tracker core module | ✅ Done | no mapping |
+| 41 | 2. Implement Reasoning Logger and agent integration | ✅ Done | no mapping |
+| 42 | 3. Checkpoint | ✅ Done | no mapping |
+| 43 | 4. LocalStack wiring and demo infrastructure | ✅ Done | no mapping |
+| 44 | 5. Orchestrator integration with SavingsTracker | ✅ Done | no mapping |
+| 45 | 6. Update .gitignore and project configuration | ✅ Done | no mapping |
+| 46 | 7. Checkpoint | ✅ Done | no mapping |
+| 47 | 8. Implement SPEC_COMPLIANCE.md generator | ❌ Pending | — |
+| 48 | 9. Implement Streamlit Reasoning Panel | ❌ Pending | — |
+| 49 | 10. Final checkpoint | ❌ Pending | — |
