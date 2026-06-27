@@ -19,7 +19,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - **Property 1: RunEntry schema and field correctness**
     - **Validates: Requirements 1.2, 2.1**
 
-  - [ ] 1.3 Write property test: Monthly savings computation
+  - [x] 1.3 Write property test: Monthly savings computation
     - **Property 2: Monthly savings computation**
     - **Validates: Requirements 2.2**
 
