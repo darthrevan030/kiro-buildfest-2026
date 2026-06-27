@@ -187,6 +187,181 @@ class ApprovalGate:
         self._locked = False
 
 
+class RollbackGate:
+    """Stateful two-step rollback gate.
+
+    Implements the rollback protocol:
+      1. User types "ROLLBACK <resource_id>" (exact match, case-sensitive)
+      2. User types "CONFIRM ROLLBACK <resource_id>" (exact match, case-sensitive)
+
+    Failed attempts are tracked across both steps. After max_attempts total
+    failures, the gate locks and rejects all further input until reset.
+
+    States:
+      - "awaiting_rollback": Initial state, expects ROLLBACK command
+      - "awaiting_confirmation": ROLLBACK accepted, expects CONFIRM ROLLBACK
+      - "confirmed": Both steps passed, rollback approved
+      - "locked": Max attempts exceeded, gate is locked
+
+    Args:
+        resource_id: The resource ID expected in both commands.
+        max_attempts: Maximum total failed attempts before locking. Default is 3.
+    """
+
+    def __init__(self, resource_id: str, max_attempts: int = 3) -> None:
+        self.resource_id = resource_id
+        self.max_attempts = max_attempts
+        self._attempts: int = 0
+        self._state: str = "awaiting_rollback"
+
+    @property
+    def attempts(self) -> int:
+        """Number of failed attempts so far."""
+        return self._attempts
+
+    @property
+    def locked(self) -> bool:
+        """Whether the gate is locked due to max attempts exceeded."""
+        return self._state == "locked"
+
+    @property
+    def state(self) -> str:
+        """Current gate state."""
+        return self._state
+
+    def process_input(self, input_str: str) -> dict:
+        """Route input to the correct handler based on current state.
+
+        Args:
+            input_str: The raw input string to validate.
+
+        Returns:
+            Dict with 'valid', 'state', and contextual keys depending on outcome.
+        """
+        if self._state == "locked":
+            return {
+                "valid": False,
+                "error": "Max attempts exceeded",
+                "locked": True,
+                "state": "locked",
+            }
+
+        if self._state == "confirmed":
+            return {
+                "valid": True,
+                "state": "confirmed",
+                "resource_id": self.resource_id,
+            }
+
+        if self._state == "awaiting_rollback":
+            return self.attempt_rollback(input_str)
+
+        if self._state == "awaiting_confirmation":
+            return self.attempt_confirm(input_str)
+
+        # Should not reach here
+        return {"valid": False, "error": "Unknown state", "state": self._state}
+
+    def attempt_rollback(self, input_str: str) -> dict:
+        """Validate a ROLLBACK command (step 1).
+
+        Args:
+            input_str: The raw input string to validate.
+
+        Returns:
+            On success: advances state to 'awaiting_confirmation'.
+            On failure: increments attempts, may lock.
+        """
+        if self._state == "locked":
+            return {
+                "valid": False,
+                "error": "Max attempts exceeded",
+                "locked": True,
+                "state": "locked",
+            }
+
+        result = parse_rollback(input_str, self.resource_id)
+
+        if result["valid"]:
+            self._state = "awaiting_confirmation"
+            return {
+                "valid": True,
+                "state": "awaiting_confirmation",
+                "resource_id": self.resource_id,
+            }
+
+        # Failed attempt
+        self._attempts += 1
+        if self._attempts >= self.max_attempts:
+            self._state = "locked"
+            return {
+                "valid": False,
+                "error": "Max attempts exceeded",
+                "locked": True,
+                "state": "locked",
+            }
+
+        return {
+            "valid": False,
+            "error": result["error"],
+            "expected_format": result["expected_format"],
+            "attempts_remaining": self.max_attempts - self._attempts,
+            "state": "awaiting_rollback",
+        }
+
+    def attempt_confirm(self, input_str: str) -> dict:
+        """Validate a CONFIRM ROLLBACK command (step 2).
+
+        Args:
+            input_str: The raw input string to validate.
+
+        Returns:
+            On success: advances state to 'confirmed'.
+            On failure: increments attempts, may lock.
+        """
+        if self._state == "locked":
+            return {
+                "valid": False,
+                "error": "Max attempts exceeded",
+                "locked": True,
+                "state": "locked",
+            }
+
+        result = parse_confirm_rollback(input_str, self.resource_id)
+
+        if result["valid"]:
+            self._state = "confirmed"
+            return {
+                "valid": True,
+                "state": "confirmed",
+                "resource_id": self.resource_id,
+            }
+
+        # Failed attempt
+        self._attempts += 1
+        if self._attempts >= self.max_attempts:
+            self._state = "locked"
+            return {
+                "valid": False,
+                "error": "Max attempts exceeded",
+                "locked": True,
+                "state": "locked",
+            }
+
+        return {
+            "valid": False,
+            "error": result["error"],
+            "expected_format": result["expected_format"],
+            "attempts_remaining": self.max_attempts - self._attempts,
+            "state": "awaiting_confirmation",
+        }
+
+    def reset(self) -> None:
+        """Reset state back to initial, clear attempts and unlock."""
+        self._attempts = 0
+        self._state = "awaiting_rollback"
+
+
 if __name__ == "__main__":
     # Basic self-test assertions
     print("Running approval_gate self-tests...")
