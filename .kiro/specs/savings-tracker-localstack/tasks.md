@@ -36,7 +36,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - **Validates: Requirements 4.1, 4.2, 4.4**
 
 - [ ] 2. Implement Reasoning Logger and agent integration
-  - [ ] 2.1 Create `agents/reasoning_logger.py` with ReasoningLogger class
+  - [x] 2.1 Create `agents/reasoning_logger.py` with ReasoningLogger class
     - Implement `__init__` with configurable `log_path` defaulting to `agent_reasoning.log`
     - Implement `truncate()` to clear log at audit start
     - Implement `emit(agent, event_type, resource_id, message)` appending one JSON line per call
