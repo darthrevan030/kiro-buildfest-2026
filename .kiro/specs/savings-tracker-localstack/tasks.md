@@ -183,7 +183,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - **Validates: Requirements 8.4**
 
 - [ ] 9. Implement Streamlit Reasoning Panel
-  - [ ] 9.1 Add reasoning log panel to `app.py`
+  - [x] 9.1 Add reasoning log panel to `app.py`
     - Implement `reasoning_log_panel()` using `@st.fragment(run_every=1)` for Streamlit >= 1.33
     - Implement fallback polling with background thread for older Streamlit
     - Read `agent_reasoning.log`, parse JSONL, skip malformed lines silently
