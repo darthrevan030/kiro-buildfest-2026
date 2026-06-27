@@ -31,6 +31,7 @@ from agents.approval_gate import (
     parse_confirm_rollback,
     parse_rollback,
 )
+from agents.audit_logger import AuditLogger
 from agents.finops_auditor import FinOpsAuditor
 from agents.remediation_architect import RemediationArchitect, RemediationPlan
 from agents.secops_guard import SecOpsGuard
@@ -135,6 +136,9 @@ class Orchestrator:
             output_dir=self.output_dir,
             rollbacks_dir=self.rollbacks_dir,
         )
+
+        # Audit logger (append-only, file-based)
+        self._audit_logger = AuditLogger(self.audit_log_path)
 
         # Approval gates per resource (keyed by resource_id)
         self._approval_gates: dict[str, ApprovalGate] = {}
@@ -535,7 +539,7 @@ class Orchestrator:
         return RollbackResult(success=True, resource_id=resource_id)
 
     def _log_action(self, action: str, resource_id: str, result: str, details: str = "") -> None:
-        """Append an entry to the internal audit trail."""
+        """Append an entry to the internal audit trail and the persistent audit log."""
         entry = AuditEntry(
             timestamp=datetime.now(timezone.utc).isoformat(),
             action=action,
@@ -545,3 +549,5 @@ class Orchestrator:
             details=details,
         )
         self._audit_trail.append(entry)
+        # Persist to append-only file log (failures are non-blocking)
+        self._audit_logger.append(entry.to_dict())
