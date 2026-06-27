@@ -208,9 +208,13 @@ class TestHappyPath:
             assert approval.success is True
             assert approval.resource_id == "vol-abc123"
 
-            # Pre-remediation (1st call) + post-remediation (2nd call)
-            assert mock_run.call_count == 2
-            post_call_args = mock_run.call_args_list[1][0][0]
+            # Pre-remediation (1st call) + tflocal apply (2nd call) + post-remediation (3rd call)
+            assert mock_run.call_count == 3
+            # Verify tflocal apply call
+            apply_call_args = mock_run.call_args_list[1][0][0]
+            assert apply_call_args == ["tflocal", "apply", "-auto-approve"]
+            # Verify post-remediation hook call
+            post_call_args = mock_run.call_args_list[2][0][0]
             assert "post-remediation.sh" in post_call_args[1]
             assert "vol-abc123" in post_call_args
             assert "remediate" in post_call_args
@@ -382,8 +386,8 @@ class TestPostRemediationHook:
 
         def side_effect(*args, **kwargs):
             call_count[0] += 1
-            if call_count[0] == 1:
-                # Pre-remediation hook passes
+            if call_count[0] <= 2:
+                # Pre-remediation hook and tflocal apply pass
                 return subprocess.CompletedProcess(
                     args=[], returncode=0, stdout="", stderr=""
                 )
