@@ -66,6 +66,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
 
   - [ ]* 2.5 Write property test: Reasoning logger emits valid structured JSON
     - **Property 8: Reasoning logger emits valid structured JSON**
+    - Use `st.text(alphabet=st.characters(blacklist_categories=('Cs',)))` for message and agent fields — must cover quotes, backslashes, and unicode characters, NOT just default ASCII
     - **Validates: Requirements 9.4, 9.9**
 
   - [ ]* 2.6 Write property test: Reasoning logger sequential append
@@ -92,13 +93,20 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - _Requirements: 6.3_
 
   - [ ] 4.4 Create `Makefile` at project root with `demo` target
-    - Run `docker-compose up -d`
-    - Poll LocalStack health endpoint every 2s, max 30 attempts with progress dots
-    - Run `python -m orchestrator` then `tflocal apply -auto-approve`
+    - Run `docker-compose up -d` to start LocalStack
+    - Poll LocalStack health endpoint (`http://localhost:4566/_localstack/health`) every 2s, max 30 attempts with progress dots
+    - Launch Streamlit dashboard via `streamlit run app.py` as the final step
+    - The Makefile SHALL NOT invoke `tflocal apply` directly — the apply happens inside `orchestrator.py` when the user types `APPROVE <resource-id>` through the Streamlit UI
     - Exit non-zero with error message if health check exceeds 60 seconds
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-  - [ ] 4.5 Update `requirements.txt` to add `terraform-local`
+  - [ ] 4.5 Wire `tflocal apply -auto-approve` into orchestrator approval flow
+    - In `orchestrator.py`, after successful approval gate validation, invoke `subprocess.run(["tflocal", "apply", "-auto-approve"], cwd=output_dir)` against LocalStack
+    - If `tflocal apply` returns non-zero exit code, surface stderr as error message and halt pipeline without proceeding
+    - This is triggered exclusively by the user typing `APPROVE <resource-id>` in the UI, NOT by the Makefile
+    - _Requirements: 6.4, 6.5_
+
+  - [ ] 4.6 Update `requirements.txt` to add `terraform-local`
     - Add `terraform-local>=0.18.0` to requirements.txt
     - _Requirements: 6.2_
 
@@ -135,7 +143,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Read and parse `.kiro/specs/tasks.md` for checkbox lines (`- [x]`, `- [ ]`, `- [-]`)
     - Implement keyword-to-file mapping table per requirements 8.3
     - Verify file existence for done tasks
-    - Output `SPEC_COMPLIANCE.md` as a Markdown table with columns: #, Task, Status, Artifact Verified
+    - Output `SPEC_COMPLIANCE.md` as a 4-column Markdown table with columns: `#`, `Task`, `Status`, `Artifact Verified`
     - Exit with non-zero code if tasks.md is missing
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
@@ -150,6 +158,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
 
   - [ ]* 8.4 Write property test: Compliance generator output format
     - **Property 7: Compliance generator output format**
+    - Verify output is a valid 4-column Markdown table with headers: `#`, `Task`, `Status`, `Artifact Verified`
     - **Validates: Requirements 8.4**
 
 - [ ] 9. Implement Streamlit Reasoning Panel
@@ -184,6 +193,8 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
 - The implementation language is Python, matching the existing codebase
 - `hypothesis` is already in requirements.txt for property-based testing
 - All agents already exist — tasks 2.2–2.4 modify existing files to add emit calls
+- **Key design constraint**: `tflocal apply -auto-approve` is triggered exclusively by `orchestrator.py` when the user types `APPROVE <resource-id>` — the Makefile only starts LocalStack and launches Streamlit
+- **Property 8 testing note**: Use `st.text(alphabet=st.characters(blacklist_categories=('Cs',)))` for agent/message fields to cover quotes, backslashes, and unicode — not just default ASCII
 
 ## Task Dependency Graph
 
@@ -191,9 +202,9 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
 {
   "waves": [
     { "id": 0, "tasks": ["1.1", "2.1", "6.1"] },
-    { "id": 1, "tasks": ["1.2", "1.3", "1.4", "1.5", "1.6", "2.2", "2.3", "2.4", "4.3", "4.5"] },
-    { "id": 2, "tasks": ["2.5", "2.6", "4.1", "4.2", "4.4"] },
-    { "id": 3, "tasks": ["5.1", "5.2"] },
+    { "id": 1, "tasks": ["1.2", "1.3", "1.4", "1.5", "1.6", "2.2", "2.3", "2.4", "4.3", "4.6"] },
+    { "id": 2, "tasks": ["2.5", "2.6", "4.1", "4.2"] },
+    { "id": 3, "tasks": ["4.4", "4.5", "5.1", "5.2"] },
     { "id": 4, "tasks": ["5.3", "8.1"] },
     { "id": 5, "tasks": ["8.2", "8.3", "8.4", "9.1"] },
     { "id": 6, "tasks": ["9.2", "9.3"] }
