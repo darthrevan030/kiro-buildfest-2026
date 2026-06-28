@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design covers 9 features spanning Phase B (Tier 2 AI Features) and Phase C (Tier 3 Platform Features) for the Cloud Janitor project. Phase B introduces LLM-powered intelligence via Anthropic's claude-haiku-4-5 model — natural language querying, remediation explanations, policy suggestions, auto-tagging, and anomaly detection. Phase C adds platform capabilities — policy generation from incidents, drift detection with narrative, multi-account orchestration, and scheduled scans.
+This design covers 9 features spanning Phase B (Tier 2 AI Features) and Phase C (Tier 3 Platform Features) for the Cloud Janitor project. Phase B introduces LLM-powered intelligence via OpenRouter's API (OpenAI-compatible) using claude-haiku-4-5 as the default model — natural language querying, remediation explanations, policy suggestions, auto-tagging, and anomaly detection. Phase C adds platform capabilities — policy generation from incidents, drift detection with narrative, multi-account orchestration, and scheduled scans.
 
 All AI agents follow the same architectural pattern: a dedicated class in `agents/`, a corresponding `@mcp.tool()` in `aws_janitor_mcp.py`, direct import (no network transport), safe-default error handling (never raise from AI), and session state caching in `app.py`. The existing pipeline (FinOps → SecOps → Remediation Architect) remains unchanged; new features integrate as pre-scan filters, post-scan enrichments, or independent workflows.
 
@@ -47,7 +47,8 @@ graph TD
     end
 
     subgraph External["External Services"]
-        Anthropic[Anthropic API - claude-haiku-4-5]
+        OpenRouter[OpenRouter API - OpenAI-compatible]
+        LLMClient[llm_client.py - shared LLM wrapper]
         MCP[MCP Server - aws_janitor_mcp.py]
     end
 
@@ -71,13 +72,14 @@ graph TD
     MultiAcct --> Orch
     Scheduler --> Orch
 
-    QueryInterp --> Anthropic
-    Explainer --> Anthropic
-    PolicySug --> Anthropic
-    Tagger --> Anthropic
-    Anomaly --> Anthropic
-    IncidentGen --> Anthropic
-    Drift --> Anthropic
+    QueryInterp --> LLMClient
+    Explainer --> LLMClient
+    PolicySug --> LLMClient
+    Tagger --> LLMClient
+    Anomaly --> LLMClient
+    IncidentGen --> LLMClient
+    Drift --> LLMClient
+    LLMClient --> OpenRouter
 
     FinOps --> MCP
     SecOps --> MCP
@@ -106,7 +108,7 @@ sequenceDiagram
     participant SecOps as SecOpsGuard
     participant AD as AnomalyDetector
     participant DD as DriftDetector
-    participant LLM as Anthropic API
+    participant LLM as OpenRouter API (via llm_client.py)
 
     User->>App: "Show me idle Redis clusters over $50/mo"
     App->>QI: interpret("Show me idle Redis clusters over $50/mo")
@@ -714,8 +716,8 @@ def interpret(query: str, model: str = "claude-haiku-4-5") -> dict:
 **Preconditions:**
 
 - `query` is a string (may be empty — returns safe defaults)
-- Anthropic API key is available in environment
-- `model` is a valid Anthropic model identifier
+- `OPENROUTER_API_KEY` is set in environment
+- `JANITOR_LLM_MODEL` env var sets the model (default: "anthropic/claude-haiku-4-5")
 
 **Postconditions:**
 
@@ -746,12 +748,14 @@ BEGIN
     prompt = PROMPT_TEMPLATE.format(query=query)
 
     TRY:
-        response = anthropic_client.messages.create(
-            model=model,
+        from llm_client import get_client, DEFAULT_MODEL
+        client = get_client()
+        response = client.chat.completions.create(
+            model=DEFAULT_MODEL,
             max_tokens=256,
             messages=[{"role": "user", "content": prompt}]
         )
-        parsed = json.loads(response.content[0].text)
+        parsed = json.loads(response.choices[0].message.content)
         
         # Validate and sanitize
         params = {
@@ -779,7 +783,7 @@ def detect(resources: list[dict], findings: list[dict]) -> list[dict]:
 
 - `resources` is a valid list of resource dicts from MCP (may be empty)
 - `findings` is a list of already-identified findings from FinOps + SecOps
-- Anthropic API available
+- OPENROUTER_API_KEY is set in environment
 
 **Postconditions:**
 
@@ -1133,7 +1137,7 @@ def generate(incident_description: str) -> list[dict]:
 **Preconditions:**
 
 - `incident_description` is a string (empty → returns [])
-- Anthropic API available
+- OPENROUTER_API_KEY is set in environment
 - `policies/` directory exists or can be created
 
 **Postconditions:**
@@ -1520,80 +1524,145 @@ policies = gen.generate(
 
 ## Correctness Properties
 
-### Property 1: Universal Properties (All AI Agents)
+*A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
 
-1. **Never-Raise**: ∀ input, ∀ agent ∈ {QueryInterpreter, RemediationExplainer, PolicySuggester, ResourceTagger, AnomalyDetector, IncidentPolicyGenerator, DriftDetector}: agent.method(input) does not raise an exception
-   - **Validates: Requirements 1.1**
-2. **Safe Defaults**: ∀ agent, if LLM call fails → output contains valid default values (empty lists, zero counts, "unknown" strings)
-   - **Validates: Requirements 1.2**
-3. **Schema Compliance**: ∀ agent output: all required keys present with correct types
-   - **Validates: Requirements 1.3**
-4. **Idempotency of Read Operations**: ∀ read-only methods (interpret, explain, suggest, detect): calling twice with same input produces structurally equivalent output
-   - **Validates: Requirements 1.4**
+### Property 1: Never-Raise Guarantee
 
-### Property 2: QueryInterpreter Properties
+*For any* input (including empty strings, malformed dicts, None values, and adversarial content) and *for any* AI agent in {QueryInterpreter, RemediationExplainer, PolicySuggester, ResourceTagger, AnomalyDetector, IncidentPolicyGenerator, DriftDetector}, calling the agent's primary method SHALL NOT raise an unhandled exception to the caller.
 
-1. **Confidence Bounded**: ∀ query: 0.0 ≤ interpret(query).confidence ≤ 1.0
-   - **Validates: Requirements 2.1**
-2. **Resource Types Valid**: ∀ query: all items in interpret(query).resource_types ∈ {"elasticache", "ebs", "ec2"}
-   - **Validates: Requirements 2.2**
-3. **Check Types Valid**: ∀ query: all items in interpret(query).check_types ∈ {"security_group", "encryption", "public_access"}
-   - **Validates: Requirements 2.3**
-4. **Non-Negative Numerics**: ∀ query: interpret(query).min_idle_days ≥ 0
-   - **Validates: Requirements 2.4**
+**Validates: Requirements 1.8**
 
-### Property 3: AnomalyDetector Properties
+### Property 2: Safe Defaults on LLM Failure
 
-1. **No Duplicate Flagging**: ∀ resources, findings: {a.resource_id for a in detect(resources, findings)} ∩ {f.resource_id for f in findings} == ∅
-   - **Validates: Requirements 3.1**
-2. **Returns List**: ∀ input: type(detect(resources, findings)) == list
-   - **Validates: Requirements 3.2**
+*For any* AI agent and *for any* input, when the LLM call raises an exception or returns unparseable output, the agent SHALL return its documented safe-default value with correct schema (all required keys present, correct types, valid enum values).
 
-### Property 4: DriftDetector Properties
+**Validates: Requirements 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 2.5, 2.6**
 
-1. **First Scan No Drift**: if scan_history.json has < 2 snapshots → detect().drift == None
-   - **Validates: Requirements 4.1**
-2. **Atomic Write**: scan_history.json is never left in a partial/corrupt state after save_snapshot()
-   - **Validates: Requirements 4.2**
-3. **Max Snapshots Respected**: after any save_snapshot() call, len(scan_history.json entries) ≤ 30
-   - **Validates: Requirements 4.3**
-4. **Waste Delta Correct**: detect().waste_delta == current_total_waste - previous_total_waste
-   - **Validates: Requirements 4.4**
+### Property 3: QueryInterpreter Output Validity
 
-### Property 5: MultiAccountOrchestrator Properties
+*For any* string input to interpret(), the returned dict SHALL satisfy: confidence ∈ [0.0, 1.0], all resource_types items ∈ {"elasticache", "ebs", "ec2"}, all check_types items ∈ {"security_group", "encryption", "public_access"}, min_idle_days ≥ 0, and intent_summary is a non-empty string.
 
-1. **Isolation**: ∀ account_i, account_j (i ≠ j): failure of audit(account_i) does not affect audit(account_j)
-   - **Validates: Requirements 5.1**
-2. **Completeness**: run_all().accounts_scanned == len(accounts in accounts.json)
-   - **Validates: Requirements 5.2**
-3. **Account ID Injected**: ∀ finding in run_all().aggregate_findings: "account_id" in finding
-   - **Validates: Requirements 5.3**
+**Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.7**
 
-### Property 6: JanitorScheduler Properties
+### Property 4: RemediationExplainer Schema Completeness
 
-1. **Status Schema**: get_status() always returns dict with keys: running, schedule, next_run, last_run, runs_completed
-   - **Validates: Requirements 6.1**
-2. **Idempotent Start**: calling start() twice results in exactly one running scheduler
-   - **Validates: Requirements 6.2**
-3. **Clean Shutdown**: after stop(), no background threads remain active
-   - **Validates: Requirements 6.3**
-4. **History Growth**: runs_completed increases by 1 after each scheduled execution
-   - **Validates: Requirements 6.4**
+*For any* combination of resource_id, finding dict, remediation_hcl, and rollback_hcl inputs, the explain() method SHALL return a dict containing exactly three keys: risk_explanation, what_terraform_does, what_rollback_restores — each being a non-empty string.
 
-### Property 7: IncidentPolicyGenerator Properties
+**Validates: Requirements 3.4, 1.2**
 
-1. **File Written on Success**: ∀ policy in generate() result: file exists at policies/{policy.policy_id}.json
-   - **Validates: Requirements 7.1**
-2. **No File on Failure**: if generate() returns [] due to error → no new files created in policies/
-   - **Validates: Requirements 7.2**
-3. **Valid Policy Schema**: ∀ saved policy: check_type ∈ {"security_group", "encryption", "public_access", "idle_resource"}
-   - **Validates: Requirements 7.3**
+### Property 5: PolicySuggester Output Bounds and Exclusion
+
+*For any* findings list and *for any* already_checked list, the suggest() method SHALL return a list of 0-5 dicts, each containing suggestion_id, title, rationale, query, and priority ∈ {"high", "medium", "low"}, and no suggestion SHALL reference a check_type already in already_checked.
+
+**Validates: Requirements 4.1, 4.2, 4.3, 4.4**
+
+### Property 6: ResourceTagger Enum and Confidence Constraints
+
+*For any* resource_id and resource_name input, the infer() method SHALL return env ∈ {"production", "staging", "development", "unknown"}, risk_level ∈ {"high", "medium", "low"}, and confidence ∈ [0.0, 1.0]. If confidence < confidence_threshold, team and owner SHALL be None.
+
+**Validates: Requirements 5.1, 5.2, 5.3, 5.6**
+
+### Property 7: ResourceTagger Existing Tags Passthrough
+
+*For any* resource where existing_tags contains env, team, or owner keys, those fields in the output SHALL equal the existing_tags values regardless of LLM inference results.
+
+**Validates: Requirements 5.4**
+
+### Property 8: AnomalyDetector Disjoint Resource IDs
+
+*For any* resources list and *for any* findings list, the set of resource_ids in detect() output SHALL be disjoint from the set of resource_ids in the findings input.
+
+**Validates: Requirements 6.1**
+
+### Property 9: AnomalyDetector Output Schema
+
+*For any* input, detect() SHALL return a flat list where each element contains: anomaly_id, resource_id, anomaly_type, description, severity ∈ {"high", "medium", "low"}, and evidence.
+
+**Validates: Requirements 6.2, 6.3**
+
+### Property 10: IncidentPolicyGenerator Idempotency
+
+*For any* incident description, calling generate() twice with the same text SHALL produce the same result without a second LLM call (matched by incident_hash).
+
+**Validates: Requirements 7.6**
+
+### Property 11: IncidentPolicyGenerator File Consistency
+
+*For any* successfully generated policy in the return list, a corresponding file SHALL exist at policies/{policy_id}.json, and the file contents SHALL match the returned dict. When generate() returns [] due to failure, no new files SHALL be created.
+
+**Validates: Requirements 7.2, 7.1**
+
+### Property 12: IncidentPolicyGenerator Schema and Bounds
+
+*For any* valid non-empty incident description (≤2000 chars), generate() SHALL return 3-5 policy dicts, each containing: policy_id, policy_name, resource_types (non-empty list), check_type ∈ {"security_group", "encryption", "public_access", "idle_resource"}, check_logic_description, rationale, query, generated_at (ISO timestamp), incident_hash (8-char hex), version=1.
+
+**Validates: Requirements 7.1, 7.3, 7.7**
+
+### Property 13: IncidentPolicyGenerator Input Validation
+
+*For any* whitespace-only string, generate() SHALL return [] without writing files. *For any* string exceeding 2000 characters, the LLM SHALL receive at most 2000 characters of the description.
+
+**Validates: Requirements 7.4, 7.5**
+
+### Property 14: DriftDetector Max Snapshots Invariant
+
+*For any* sequence of save_snapshot() calls, the number of entries in scan_history.json SHALL never exceed 30.
+
+**Validates: Requirements 8.3**
+
+### Property 15: DriftDetector Waste Delta Correctness
+
+*For any* two consecutive snapshots with total_waste values W_prev and W_curr, detect() SHALL return waste_delta = W_curr - W_prev.
+
+**Validates: Requirements 8.4**
+
+### Property 16: DriftDetector Finding Diff Correctness
+
+*For any* two consecutive snapshots, new_findings SHALL contain exactly those findings present in the current snapshot but absent from the previous snapshot (matched by resource_id, check_type pair), and resolved_findings SHALL contain exactly those present in the previous but absent from the current.
+
+**Validates: Requirements 8.5**
+
+### Property 17: DriftDetector Output Schema
+
+*For any* history with ≥2 snapshots, detect() SHALL return a dict containing: new_findings (list), resolved_findings (list), waste_delta (float), critical_delta (int), narrative (string), compared_scans (list of 2 scan_ids).
+
+**Validates: Requirements 8.8**
+
+### Property 18: MultiAccountOrchestrator Fault Isolation
+
+*For any* set of account configurations where one account's audit raises an exception, the remaining accounts' audit results SHALL be unaffected (status="success" with correct findings).
+
+**Validates: Requirements 9.2**
+
+### Property 19: MultiAccountOrchestrator Account ID Injection
+
+*For any* successful multi-account audit, every finding in aggregate_findings SHALL contain an "account_id" field matching the account it originated from.
+
+**Validates: Requirements 9.3**
+
+### Property 20: MultiAccountOrchestrator Priority Sorting
+
+*For any* set of account results, the by_account list SHALL be sorted by priority with "high" first, then "medium", then "low".
+
+**Validates: Requirements 9.4**
+
+### Property 21: JanitorScheduler Status Schema
+
+*For any* scheduler state (running or stopped), get_status() SHALL return a dict with keys: running (bool), schedule (str), next_run (str|None), last_run (str|None), runs_completed (int).
+
+**Validates: Requirements 10.4**
+
+### Property 22: JanitorScheduler Idempotent Start
+
+*For any* number of sequential start() calls, exactly one scheduler instance SHALL be running afterward.
+
+**Validates: Requirements 10.5**
 
 ## Error Handling
 
 ### Error Scenario 1: LLM API Unavailable
 
-**Condition**: Anthropic API returns connection error, timeout, or rate limit
+**Condition**: OpenRouter API returns connection error, timeout, or rate limit
 **Response**: All AI agents catch the exception and return safe defaults
 **Recovery**:
 
@@ -1656,7 +1725,12 @@ Each new agent class requires:
 1. **Known expected value test**: Concrete input → concrete expected output (not derived from function under test)
 2. **Negative test**: Invalid input → graceful handling (no raise, safe defaults)
 3. **Schema validation**: Output dicts checked for required keys and correct types
-4. **LLM mocking**: Mock `anthropic.Anthropic.messages.create` — never the agent method itself
+4. **LLM mocking**: Mock `llm_client.get_client` — never the agent method itself. Example pattern:
+
+   ```python
+   with patch("llm_client.get_client") as mock_client:
+       mock_client.return_value.chat.completions.create.return_value.choices[0].message.content = '{"key": "value"}'
+   ```
 
 Key test files:
 
@@ -1693,7 +1767,8 @@ Properties to test:
 
 ### LLM Call Latency
 
-- All LLM calls use claude-haiku-4-5 (fastest model) for sub-second responses
+- All LLM calls route through llm_client.py to OpenRouter using `JANITOR_LLM_MODEL` (default: `anthropic/claude-haiku-4-5`)
+- Model can be swapped to cheaper alternatives (e.g. `mistralai/mistral-7b-instruct`) via env var for testing
 - Session state caching in `app.py` prevents redundant LLM calls on Streamlit rerenders
 - Cache keyed by: (agent_name, input_hash) → result
 - Cache invalidated on new audit execution
@@ -1722,9 +1797,11 @@ Properties to test:
 
 ### API Key Management
 
-- Anthropic API key read from `ANTHROPIC_API_KEY` environment variable
-- Never logged, never included in findings or outputs
+- OpenRouter API key read from `OPENROUTER_API_KEY` environment variable
+- Model selection read from `JANITOR_LLM_MODEL` (default: `"anthropic/claude-haiku-4-5"`)
+- Key is never logged, never included in findings or outputs
 - All AI agents fail gracefully if key missing (safe defaults)
+- Model can be swapped to any OpenRouter-supported model without code changes
 
 ### LLM Output Sanitization
 
@@ -1750,7 +1827,8 @@ Properties to test:
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| anthropic | >=0.25.0 | Anthropic SDK for claude-haiku-4-5 LLM calls |
+| openai | >=1.0.0 | OpenAI-compatible SDK for OpenRouter API calls |
+| (llm_client.py) | project file | Shared wrapper — single import point for all LLM calls |
 | filelock | >=3.13.0 | Cross-platform file locking for scan_history.json |
 | APScheduler | >=3.10.0 | Cron-based scheduling for automated scans |
 
@@ -1775,6 +1853,10 @@ Properties to test:
 
 ```mermaid
 graph LR
+    subgraph Shared
+        LLC[llm_client.py]
+    end
+
     subgraph New Agents
         QI[query_interpreter]
         RE[explainer]
@@ -1796,6 +1878,15 @@ graph LR
         FinOps[finops_auditor]
         SecOps[secops_guard]
     end
+
+    QI --> LLC
+    RE --> LLC
+    PS --> LLC
+    RT --> LLC
+    AD --> LLC
+    IPG --> LLC
+    DD --> LLC
+    LLC --> OpenRouter
 
     QI --> MCP
     AD --> MCP
