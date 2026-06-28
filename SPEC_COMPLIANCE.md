@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T09:12:36Z
+Generated: 2026-06-28T09:21:19Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -62,8 +62,8 @@ Generated: 2026-06-28T09:12:36Z
 | 56 | 5.4 Write property tests for DriftDetector | ✅ Done | no mapping |
 | 57 | 6. Implement Phase C platform agents (MultiAccountOrchestrator, JanitorScheduler) | ❌ Pending | — |
 | 58 | 6.1 Implement `agents/multi_account_orchestrator.py` | ✅ Done | no mapping |
-| 59 | 6.2 Write property tests for MultiAccountOrchestrator | ❌ Pending | — |
-| 60 | 6.3 Implement `scheduler.py` at project root | ⏳ Partial | no mapping |
+| 59 | 6.2 Write property tests for MultiAccountOrchestrator | ⏳ Partial | no mapping |
+| 60 | 6.3 Implement `scheduler.py` at project root | ✅ Done | no mapping |
 | 61 | 6.4 Write property tests for JanitorScheduler | ❌ Pending | — |
 | 62 | 7. Checkpoint - Ensure all Phase C agent tests pass | ❌ Pending | — |
 | 63 | 8. Wire MCP tools and orchestrator integration | ❌ Pending | — |

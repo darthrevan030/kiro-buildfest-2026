@@ -161,7 +161,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - **Validates: Requirements 8.3, 8.4, 8.5, 8.8**
 
 - [ ] 6. Implement Phase C platform agents (MultiAccountOrchestrator, JanitorScheduler)
-  - [ ] 6.1 Implement `agents/multi_account_orchestrator.py`
+  - [x] 6.1 Implement `agents/multi_account_orchestrator.py`
     - Create `MultiAccountOrchestrator` class with `run_all() -> dict` and `load_accounts() -> list[dict]`
     - Load accounts from `accounts.json`; return empty result if file missing/invalid/entries missing required fields
     - Validate role_arn matches `arn:aws:iam::\d{12}:role/.+`; skip invalid entries with error logged to stderr
@@ -174,7 +174,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return complete result dict with all required fields
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 14.4, 14.7_
 
-  - [ ] 6.2 Write property tests for MultiAccountOrchestrator
+  - [x] 6.2 Write property tests for MultiAccountOrchestrator
     - **Property 18: MultiAccountOrchestrator Fault Isolation**
     - When one account raises, remaining accounts succeed unaffected
     - **Property 19: MultiAccountOrchestrator Account ID Injection**
@@ -183,7 +183,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - by_account is sorted high → medium → low
     - **Validates: Requirements 9.2, 9.3, 9.4**
 
-  - [ ] 6.3 Implement `scheduler.py` at project root
+  - [x] 6.3 Implement `scheduler.py` at project root
     - Create `JanitorScheduler` class with `start()`, `stop()`, `get_status() -> dict`
     - Read JANITOR_SCHEDULE from env var (default "0 6 ** *"); validate as 5-field cron; fall back to default with warning on invalid
     - start() is non-blocking, idempotent (stops previous scheduler before starting new one)
@@ -195,7 +195,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Graceful shutdown on stop() within 5 seconds
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 14.5_
 
-  - [ ] 6.4 Write property tests for JanitorScheduler
+  - [x] 6.4 Write property tests for JanitorScheduler
     - **Property 21: JanitorScheduler Status Schema**
     - For any state, get_status() returns dict with keys: running, schedule, next_run, last_run, runs_completed with correct types
     - **Property 22: JanitorScheduler Idempotent Start**
