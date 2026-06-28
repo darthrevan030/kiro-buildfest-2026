@@ -34,7 +34,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - Include IAM permission documentation in method docstrings
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 
-  - [ ] 2.2 Implement GCPProvider and AzureProvider in `mcp_server/backends/gcp_provider.py` and `mcp_server/backends/azure_provider.py`
+  - [x] 2.2 Implement GCPProvider and AzureProvider in `mcp_server/backends/gcp_provider.py` and `mcp_server/backends/azure_provider.py`
     - Minimal stub classes inheriting from CloudProvider
     - All methods raise `NotImplementedError` with descriptive messages
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
