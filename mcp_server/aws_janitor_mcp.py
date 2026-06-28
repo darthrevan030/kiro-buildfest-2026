@@ -17,6 +17,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp_server.backends import CloudProvider, FixtureProvider, AWSProvider, GCPProvider, AzureProvider
 from agents.query_interpreter import QueryInterpreter
 from agents.explainer import RemediationExplainer
+from agents.policy_suggester import PolicySuggester
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
@@ -190,6 +191,29 @@ def explain_remediation(
             "what_terraform_does": "Explanation unavailable.",
             "what_rollback_restores": "Explanation unavailable.",
         }
+
+
+@mcp.tool()
+def suggest_policies(findings: list, already_checked: list) -> list:
+    """
+    Suggests additional policy checks based on scan findings patterns.
+
+    Uses direct import of PolicySuggester agent (no network transport).
+
+    Args:
+        findings: List of finding dicts from the scan results.
+        already_checked: List of check_type strings already run.
+
+    Returns:
+        List of suggestion dicts, each with keys: suggestion_id, title,
+        rationale, query, priority.
+        On error: returns empty list (safe default).
+    """
+    try:
+        suggester = PolicySuggester()
+        return suggester.suggest(findings, already_checked)
+    except Exception:
+        return []
 
 
 if __name__ == "__main__":
