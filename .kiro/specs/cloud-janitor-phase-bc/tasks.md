@@ -24,7 +24,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Add entries for `findings_store.json`, `scan_history.json`, `savings_ledger.json`, `scheduler.log`, `policies/*.json`
     - _Requirements: 14.3_
 
-  - [ ]* 1.4 Write unit tests for `llm_client.py`
+  - [ ] 1.4 Write unit tests for `llm_client.py`
     - Test `get_client()` returns OpenAI instance with correct base_url
     - Test `DEFAULT_MODEL` reads from env var with correct default
     - Test `EnvironmentError` raised when `OPENROUTER_API_KEY` unset
@@ -42,7 +42,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Import LLM via `from llm_client import get_client, DEFAULT_MODEL`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 1.1, 1.8, 1.9, 1.11_
 
-  - [ ]* 2.2 Write property test for QueryInterpreter output validity
+  - [ ] 2.2 Write property test for QueryInterpreter output validity
     - **Property 3: QueryInterpreter Output Validity**
     - For any string input, verify: confidence ∈ [0.0, 1.0], resource_types items ∈ valid set, check_types items ∈ valid set, min_idle_days ≥ 0, intent_summary is non-empty string, exactly 5 keys returned
     - **Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.7**
@@ -55,7 +55,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return all keys as "Explanation unavailable." on any exception
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 1.2, 1.8, 1.9, 1.11_
 
-  - [ ]* 2.4 Write property test for RemediationExplainer schema completeness
+  - [ ] 2.4 Write property test for RemediationExplainer schema completeness
     - **Property 4: RemediationExplainer Schema Completeness**
     - For any combination of inputs, verify: dict has exactly 3 keys, each value is a non-empty string
     - **Validates: Requirements 3.4, 1.2**
@@ -69,7 +69,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return [] on any exception
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 1.3, 1.8, 1.9, 1.11_
 
-  - [ ]* 2.6 Write property test for PolicySuggester output bounds and exclusion
+  - [ ] 2.6 Write property test for PolicySuggester output bounds and exclusion
     - **Property 5: PolicySuggester Output Bounds and Exclusion**
     - For any findings list and already_checked list, verify: 0-5 dicts returned, each has required keys, priority valid, no suggestion references check_type in already_checked
     - **Validates: Requirements 4.1, 4.2, 4.3, 4.4**
@@ -84,7 +84,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return safe defaults on any exception: env="unknown", team=None, owner=None, risk_level="low", confidence=0.0
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 1.4, 1.8, 1.9, 1.11_
 
-  - [ ]* 3.2 Write property tests for ResourceTagger
+  - [ ] 3.2 Write property tests for ResourceTagger
     - **Property 6: ResourceTagger Enum and Confidence Constraints**
     - For any input, verify: env ∈ valid set, risk_level ∈ valid set, confidence ∈ [0.0, 1.0], team/owner None when confidence < threshold
     - **Property 7: ResourceTagger Existing Tags Passthrough**
@@ -102,7 +102,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return [] on any exception
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 1.5, 1.8, 1.9, 1.11_
 
-  - [ ]* 3.4 Write property tests for AnomalyDetector
+  - [ ] 3.4 Write property tests for AnomalyDetector
     - **Property 8: AnomalyDetector Disjoint Resource IDs**
     - For any resources and findings lists, verify anomaly resource_ids are disjoint from finding resource_ids
     - **Property 9: AnomalyDetector Output Schema**
@@ -126,7 +126,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return [] on any exception; ensure no partial files left on disk on I/O error
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 1.6, 1.8, 1.9, 1.11, 14.2_
 
-  - [ ]* 5.2 Write property tests for IncidentPolicyGenerator
+  - [ ] 5.2 Write property tests for IncidentPolicyGenerator
     - **Property 10: IncidentPolicyGenerator Idempotency**
     - Calling generate() twice with same text returns same result without second LLM call
     - **Property 11: IncidentPolicyGenerator File Consistency**
@@ -149,7 +149,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - detect returns {"drift": None, "reason": "insufficient history"} when < 2 snapshots; returns {"drift": None, "reason": "error"} on failure
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 8.10, 1.7, 1.8, 1.9, 1.11, 14.6_
 
-  - [ ]* 5.4 Write property tests for DriftDetector
+  - [ ] 5.4 Write property tests for DriftDetector
     - **Property 14: DriftDetector Max Snapshots Invariant**
     - For any sequence of save_snapshot calls, entries in scan_history.json never exceed 30
     - **Property 15: DriftDetector Waste Delta Correctness**
@@ -174,7 +174,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return complete result dict with all required fields
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 14.4, 14.7_
 
-  - [ ]* 6.2 Write property tests for MultiAccountOrchestrator
+  - [ ] 6.2 Write property tests for MultiAccountOrchestrator
     - **Property 18: MultiAccountOrchestrator Fault Isolation**
     - When one account raises, remaining accounts succeed unaffected
     - **Property 19: MultiAccountOrchestrator Account ID Injection**
@@ -195,7 +195,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Graceful shutdown on stop() within 5 seconds
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 14.5_
 
-  - [ ]* 6.4 Write property tests for JanitorScheduler
+  - [ ] 6.4 Write property tests for JanitorScheduler
     - **Property 21: JanitorScheduler Status Schema**
     - For any state, get_status() returns dict with keys: running, schedule, next_run, last_run, runs_completed with correct types
     - **Property 22: JanitorScheduler Idempotent Start**
@@ -250,7 +250,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Pass safe defaults downstream when any agent fails
     - _Requirements: 1.10, 6.4, 11.10_
 
-  - [ ]* 8.8 Write unit tests for MCP tools (Phase B+C)
+  - [ ] 8.8 Write unit tests for MCP tools (Phase B+C)
     - Test each new MCP tool is callable and returns valid schema
     - Test parameter validation error handling (missing/wrong type params)
     - Test safe default responses on internal agent failure
@@ -269,7 +269,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Used for development/testing when JANITOR_BACKEND=fixture
     - _Requirements: 12.3_
 
-  - [ ]* 9.3 Write integration tests for fixture mode
+  - [ ] 9.3 Write integration tests for fixture mode
     - Test full pipeline: NL query → scan → anomaly → drift in fixture mode
     - Test all MCP tools return valid schemas in fixture mode
     - Test multi-account orchestration completes without exceptions
@@ -295,7 +295,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 12. Never-raise guarantee validation
-  - [ ]* 12.1 Write property test for never-raise guarantee across all agents
+  - [ ] 12.1 Write property test for never-raise guarantee across all agents
     - **Property 1: Never-Raise Guarantee**
     - For any input (empty, malformed, None-like, adversarial), calling each agent's primary method does not raise
     - **Property 2: Safe Defaults on LLM Failure**
