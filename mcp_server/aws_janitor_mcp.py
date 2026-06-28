@@ -15,6 +15,7 @@ from typing import Optional
 from mcp.server.fastmcp import FastMCP
 
 from mcp_server.backends import CloudProvider, FixtureProvider, AWSProvider, GCPProvider, AzureProvider
+from agents.query_interpreter import QueryInterpreter
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
@@ -126,6 +127,35 @@ def check_dependencies(resource_id: str) -> dict:
         {"has_dependencies": bool, "dependents": [...]}
     """
     return _provider.check_dependencies(resource_id)
+
+
+@mcp.tool()
+def interpret_query(user_query: str) -> dict:
+    """
+    Interprets a natural language query into structured scan parameters.
+
+    Uses direct import of QueryInterpreter agent (no network transport).
+
+    Args:
+        user_query: Natural language query describing what to scan.
+
+    Returns:
+        ScanParameters dict with keys: resource_types, check_types,
+        min_idle_days, intent_summary, confidence.
+        On error: returns dict with "error" key and safe defaults.
+    """
+    try:
+        interpreter = QueryInterpreter()
+        return interpreter.interpret(user_query)
+    except Exception as exc:
+        return {
+            "error": str(exc),
+            "resource_types": [],
+            "check_types": [],
+            "min_idle_days": 7,
+            "intent_summary": "Could not interpret query.",
+            "confidence": 0.0,
+        }
 
 
 if __name__ == "__main__":
