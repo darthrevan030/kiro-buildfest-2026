@@ -296,7 +296,7 @@ class PolicySuggester:
 **Responsibilities**:
 
 - Analyze finding patterns to suggest related checks
-- Do not suggest check_types already in already_checked
+- Do not suggest check_types already in already_checked; enforce this by post-processing filtering of LLM output after the API call, not by prompt instruction alone
 - Return 3-5 suggestions ranked by priority
 - If findings is empty, return a sensible default set of suggestions
 - Never raise — return [] on failure
@@ -348,8 +348,8 @@ class ResourceTagger:
 
 - Parse resource naming conventions (prod-, staging-, dev- prefixes)
 - Infer team/owner from naming patterns
-- If existing_tags contains env/team/owner, skip inference for those fields
-- If confidence < confidence_threshold, set team and owner to None
+- If existing_tags contains env/team/owner with non-empty, non-null string values, skip inference for those fields; empty strings and None values are treated as absent and trigger inference normally
+- If confidence is strictly below confidence_threshold, set team and owner to None; confidence exactly equal to threshold preserves inferred values
 - env must always be one of: production, staging, development, unknown
 - Support batch inference for efficiency (single LLM call for up to 10 resources)
 - Never raise — return {env: "unknown", team: None, owner: None, risk_level: "low", confidence: 0.0} on failure
@@ -396,6 +396,7 @@ class AnomalyDetector:
 - Identify unusual port configs, naming anomalies, region mismatches, cost outliers
 - Do NOT duplicate findings already in the findings list — check by resource_id
 - Integrated into orchestrator post-scan pipeline
+- Always call LLM when resources list is non-empty, even if the LLM returns no anomalies; only skip LLM call when resources list is empty
 - Never raise — return [] on failure
 
 ---
@@ -1577,7 +1578,7 @@ policies = gen.generate(
 
 ### Property 6: ResourceTagger Enum and Confidence Constraints
 
-*For any* resource_id and resource_name input, the infer() method SHALL return env ∈ {"production", "staging", "development", "unknown"}, risk_level ∈ {"high", "medium", "low"}, and confidence ∈ [0.0, 1.0]. If confidence < confidence_threshold, team and owner SHALL be None.
+*For any* resource_id and resource_name input, the infer() method SHALL return env ∈ {"production", "staging", "development", "unknown"}, risk_level ∈ {"high", "medium", "low"}, and confidence ∈ [0.0, 1.0]. If confidence is strictly below confidence_threshold, team and owner SHALL be None; if confidence equals confidence_threshold exactly, inferred values SHALL be preserved.
 
 **Validates: Requirements 5.1, 5.2, 5.3, 5.6**
 
