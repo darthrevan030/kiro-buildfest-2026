@@ -74,3 +74,18 @@ class CloudProvider(ABC):
             len(dependents) > 0.
         """
         ...
+
+
+# Import concrete providers after CloudProvider is defined to avoid circular imports.
+from mcp_server.backends.fixture_provider import FixtureProvider  # noqa: E402
+from mcp_server.backends.aws_provider import AWSProvider  # noqa: E402
+from mcp_server.backends.gcp_provider import GCPProvider  # noqa: E402
+from mcp_server.backends.azure_provider import AzureProvider  # noqa: E402
+
+__all__ = [
+    "CloudProvider",
+    "FixtureProvider",
+    "AWSProvider",
+    "GCPProvider",
+    "AzureProvider",
+]

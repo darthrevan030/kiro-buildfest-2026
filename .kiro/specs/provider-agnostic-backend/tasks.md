@@ -27,7 +27,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - **Property 4: Dependency response boolean consistency** — verify has_dependencies == (len(dependents) > 0)
     - **Validates: Requirements 2.2, 2.3, 2.4, 2.6, 2.7, 2.8, 2.9**
 
-- [ ] 2. Implement stub providers
+- [x] 2. Implement stub providers
   - [x] 2.1 Implement AWSProvider in `mcp_server/backends/aws_provider.py`
     - Lazy import of boto3 in `__init__` with ImportError handling and helpful install message
     - All methods raise `NotImplementedError` with descriptive messages
@@ -39,7 +39,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - All methods raise `NotImplementedError` with descriptive messages
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-  - [ ] 2.3 Update `mcp_server/backends/__init__.py` to export all providers
+  - [x] 2.3 Update `mcp_server/backends/__init__.py` to export all providers
     - Export CloudProvider, FixtureProvider, AWSProvider, GCPProvider, AzureProvider
     - _Requirements: 5.4_
 
