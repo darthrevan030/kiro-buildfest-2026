@@ -470,3 +470,103 @@ class TestDriftDetectorFindingDiffCorrectness:
             f"Got: {actual_resolved_keys}"
         )
         assert result["new_findings"] == []
+
+
+# ---------------------------------------------------------------------------
+# Property 17: DriftDetector Output Schema
+# ---------------------------------------------------------------------------
+
+
+class TestDriftDetectorOutputSchema:
+    """Property 17: DriftDetector Output Schema.
+
+    **Validates: Requirements 8.8**
+
+    For history with >=2 snapshots, returns dict with all required keys
+    and correct types.
+    """
+
+    @given(
+        prev_findings=unique_findings_strategy(min_size=0, max_size=5),
+        curr_findings=unique_findings_strategy(min_size=0, max_size=5),
+        w_prev=st.floats(min_value=0.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+        w_curr=st.floats(min_value=0.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+        scan_id_prev=st.text(min_size=1, max_size=20, alphabet=st.characters(
+            whitelist_categories=("L", "N"), whitelist_characters="-_"
+        )),
+        scan_id_curr=st.text(min_size=1, max_size=20, alphabet=st.characters(
+            whitelist_categories=("L", "N"), whitelist_characters="-_"
+        )),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_output_has_all_required_keys(
+        self, prev_findings, curr_findings, w_prev, w_curr,
+        scan_id_prev, scan_id_curr,
+    ):
+        """detect() output has exactly the 6 required keys."""
+        history_path = _fresh_history_path()
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "Schema test narrative."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot(scan_id_prev, prev_findings, [], w_prev)
+            detector.save_snapshot(scan_id_curr, curr_findings, [], w_curr)
+            result = detector.detect(curr_findings)
+
+        assert set(result.keys()) == REQUIRED_DRIFT_KEYS, (
+            f"Expected keys {REQUIRED_DRIFT_KEYS}, got {set(result.keys())}"
+        )
+
+
+    @given(
+        prev_findings=unique_findings_strategy(min_size=0, max_size=5),
+        curr_findings=unique_findings_strategy(min_size=0, max_size=5),
+        w_prev=st.floats(min_value=0.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+        w_curr=st.floats(min_value=0.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_output_types_are_correct(self, prev_findings, curr_findings, w_prev, w_curr):
+        """Each field in detect() output has the correct type."""
+        history_path = _fresh_history_path()
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "Type check narrative."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", prev_findings, [], w_prev)
+            detector.save_snapshot("scan-curr", curr_findings, [], w_curr)
+            result = detector.detect(curr_findings)
+
+        assert isinstance(result["new_findings"], list), (
+            f"new_findings must be list, got {type(result['new_findings'])}"
+        )
+        assert isinstance(result["resolved_findings"], list), (
+            f"resolved_findings must be list, got {type(result['resolved_findings'])}"
+        )
+        assert isinstance(result["waste_delta"], float), (
+            f"waste_delta must be float, got {type(result['waste_delta'])}"
+        )
+        assert isinstance(result["critical_delta"], int), (
+            f"critical_delta must be int, got {type(result['critical_delta'])}"
+        )
+        assert isinstance(result["narrative"], str), (
+            f"narrative must be str, got {type(result['narrative'])}"
+        )
+        assert isinstance(result["compared_scans"], list), (
+            f"compared_scans must be list, got {type(result['compared_scans'])}"
+        )
+        assert len(result["compared_scans"]) == 2, (
+            f"compared_scans must have 2 elements, got {len(result['compared_scans'])}"
+        )
+        assert all(isinstance(s, str) for s in result["compared_scans"]), (
+            "compared_scans elements must be str"
+        )
