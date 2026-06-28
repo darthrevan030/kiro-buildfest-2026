@@ -47,8 +47,6 @@ def findings_store(tmp_project):
     """Write a findings_store.json with entries from both agents."""
     store = {
         "scan_id": "error-state-test",
-        "started_at": "2025-01-20T00:00:00Z",
-        "completed_at": "2025-01-20T00:01:00Z",
         "findings": [
             {
                 "id": "f1",
@@ -314,22 +312,19 @@ class TestTerraformValidateFails:
 
         assert result.success is False
 
-        # Attempting to approve after hook failure — the AuditResult signals failure
-        # which the UI uses to block. Verify the audit result captures the error.
-        assert result.hook_error is not None
-        assert "Pre-remediation hook failed" in result.hook_error
-
-        # Additionally verify approve() behavior after a failed audit:
-        # Even if plans are stored, the audit result should communicate the failure.
+        # Attempting to approve after hook failure should fail
+        # The plans are stored but the audit failed — approval should not proceed
         with patch("orchestrator.subprocess.run") as mock_apply:
             mock_apply.return_value = subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="Apply complete!", stderr=""
+                args=[], returncode=1, stdout="", stderr="tflocal: not available"
             )
             approval = orch.approve("APPROVE vol-err001")
-        # The approval may technically succeed (plans exist) but the audit
-        # result's hook_error is what the UI uses to block the flow.
-        # This confirms the orchestrator doesn't crash on approve after hook failure.
-        assert isinstance(approval, ApprovalResult)
+        # The plan exists in _last_plans but the orchestrator should still let
+        # the gate process it — however the workflow means the UI should block.
+        # At minimum, the AuditResult signals the failure.
+        # Verify the audit result itself blocks the flow
+        assert result.hook_error is not None
+        assert "Pre-remediation hook failed" in result.hook_error
 
     def test_hook_failure_logged_in_audit_trail(self, tmp_project, findings_store):
         """Audit trail records that the pre-remediation hook blocked the flow."""

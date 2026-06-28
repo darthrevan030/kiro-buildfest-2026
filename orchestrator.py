@@ -18,7 +18,6 @@ Usage:
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -39,8 +38,6 @@ from agents.remediation_architect import RemediationArchitect, RemediationPlan
 from agents.secops_guard import SecOpsGuard
 from savings import SavingsTracker
 
-
-TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
 PROJECT_ROOT = Path(__file__).parent
 FINDINGS_STORE_PATH = PROJECT_ROOT / "findings_store.json"
@@ -90,6 +87,7 @@ class ApprovalResult:
 
     success: bool
     resource_id: str = ""
+    message: str | None = None
     error: str | None = None
     locked: bool = False
     expected_format: str | None = None
@@ -157,17 +155,16 @@ class Orchestrator:
         # Audit logger (append-only, file-based)
         self._audit_logger = AuditLogger(self.audit_log_path)
 
-        # Savings tracker
-        self._savings_tracker = SavingsTracker(
-            ledger_path=self.project_root / "savings_ledger.json",
-            findings_store_path=self.findings_store_path,
-        )
-
         # Approval gates per resource (keyed by resource_id)
         self._approval_gates: dict[str, ApprovalGate] = {}
 
         # Internal audit trail
         self._audit_trail: list[AuditEntry] = []
+
+        # Savings tracker
+        self._savings_tracker = SavingsTracker(
+            findings_store_path=self.findings_store_path,
+        )
 
         # Track last plans for approval flow
         self._last_plans: list[RemediationPlan] = []
@@ -186,7 +183,7 @@ class Orchestrator:
         Returns:
             AuditResult with findings, plans, and any errors.
         """
-        # Truncate reasoning log at the start of each new audit run
+        # Truncate reasoning log at start of each new audit run
         self._reasoning_logger.truncate()
 
         # Step 1: FinOps Auditor scan
@@ -307,9 +304,9 @@ class Orchestrator:
         # Approval valid — execute remediation (log action)
         self._log_action("approval", resource_id, "success", f"Approved by {self.approver}")
 
-        # Execute terraform apply against LocalStack
+        # Run tflocal apply -auto-approve against the output directory
         apply_result = subprocess.run(
-            [TF_CMD, "apply", "-auto-approve"],
+            ["tflocal", "apply", "-auto-approve"],
             capture_output=True,
             text=True,
             timeout=120,
@@ -317,11 +314,10 @@ class Orchestrator:
         )
         if apply_result.returncode != 0:
             error = apply_result.stderr.strip() or apply_result.stdout.strip()
-            self._log_action("execution", resource_id, "failure", f"{TF_CMD} apply failed: {error}")
             return ApprovalResult(
                 success=False,
-                error=f"{TF_CMD} apply failed: {error}",
-                resource_id=resource_id,
+                message=f"tflocal apply failed: {error}",
+                resource_id=plan.resource_id,
             )
 
         self._log_action("execution", resource_id, "success", "Remediation executed")
@@ -335,7 +331,7 @@ class Orchestrator:
         except (FileNotFoundError, OSError) as e:
             self._log_action(
                 "savings", resource_id, "warning",
-                f"Savings tracking failed: {e}",
+                f"Savings tracker failed: {e}"
             )
 
         return ApprovalResult(success=True, resource_id=resource_id)

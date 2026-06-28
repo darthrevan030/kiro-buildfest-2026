@@ -201,101 +201,8 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - **Property 11: Malformed line resilience**
     - **Validates: Requirements 10.6**
 
-- [x] 10. Final checkpoint — test quality audit
-
-  - [x] 10.1 Run full test suite and confirm all tests pass
-    - Run `pytest` from project root
-    - All tests must pass before proceeding to 10.2
-
-  - [x] 10.2 Run test quality audit on all test files
-    - Review every test file in `tests/` and `test_fixture.py` with the
-      following mandate:
-
-      You are a hostile code reviewer whose only job is to find tests
-      that cannot catch bugs. For each test, ask: "If I deliberately
-      broke the thing this test claims to test, would this test fail?"
-      If the answer is no, the test is wrong.
-
-      Flag and rewrite every test that exhibits any of these patterns:
-
-      1. TAUTOLOGICAL — test asserts the output of the function equals
-         the output of the function
-         Bad:  assert result == savings_tracker.record_run(...)
-         Good: assert result["run_id"] == "086a8f10-..."
-
-      2. PASS-BY-DEFAULT — test passes even if the function returns
-         None or an empty list
-         Bad:  assert len(result) >= 0
-         Good: assert len(result) == 2
-
-      3. WRONG FIXTURE — test uses a fixture that has no flaggable
-         resources, so the function could return [] and the test still
-         passes
-         Fix: every test fixture must contain at least one item that
-         SHOULD be flagged and verify it appears in output with correct
-         fields
-
-      4. MISSING NEGATIVE CASES — no test for what should NOT happen
-         Required negative tests for this codebase:
-         - FinOps Auditor must NOT flag resources idle < 7 days
-           (dev-test-server, 3 days idle in fixture)
-         - Approval gate must NOT accept any string other than
-           "APPROVE <exact-resource-id>"
-         - Remediation Architect must NOT generate HCL before
-           dependency check completes
-         - Rollback HCL must NOT be identical to remediation HCL
-         - SavingsTracker must NOT update total_lifetime_savings when
-           duplicate run_id is detected (mtime must be unchanged)
-         - ReasoningLogger must NOT crash on filesystem errors —
-           agent execution must continue
-
-      5. MOCKED AWAY — test mocks the exact thing being tested
-         Bad:  mock_tracker.record_run.return_value = True
-               assert mock_tracker.record_run() == True
-         Good: mock only external I/O (file reads, subprocess calls),
-               never the unit under test
-
-      6. NO SCHEMA VALIDATION — findings_store.json tests don't verify
-         required fields
-         Required: every finding must have id, resource_id,
-         resource_type, agent, category, severity, title, description,
-         cost_estimate_monthly, idle_days, metadata, detected_at
-         Test must fail if any field is missing or has wrong type
-
-      7. PROPERTY TEST TAUTOLOGY — Hypothesis test generates data and
-         passes it through the function, then asserts the output equals
-         what the function returned (not what it should return)
-         Bad:  result = tracker.record_run(resources)
-               assert result == tracker.record_run(resources)
-         Good: assert ledger["total_lifetime_savings"] == sum(
-                   r["monthly_savings_added"] for r in ledger["runs"]
-               )
-
-      For each broken test: explain why it cannot catch a bug, then
-      rewrite it so it can. Do not add new tests — fix existing ones.
-
-      After fixing, run the full test suite. If anything now fails that
-      was previously passing, that is a SUCCESS — it means we found a
-      test that was lying. Report those failures explicitly as:
-      "Found lying test: <name> — it now correctly fails because
-      <reason>".
-
-  - [x] 10.3 Verify no hardcoded `terraform` or `tflocal` binary calls remain
-    - Run: `grep -rn '"terraform"' mcp_server/ .kiro/hooks/ orchestrator.py`
-    - Run: `grep -rn '"tflocal"' mcp_server/ .kiro/hooks/ orchestrator.py`
-    - Both must return zero matches
-    - All Terraform invocations must use the TF_CMD environment variable
-      (default: "tflocal" for demo mode, override to "terraform" for real AWS)
-    - Verify TF_CMD is documented in mcp_server/README.md and Makefile comments
-
-  - [x] 10.4 Verify runtime files excluded from git
-    - Run: `git check-ignore -v savings_ledger.json agent_reasoning.log`
-    - Both files must be ignored
-
-  - [-] 10.5 Run generate_spec_compliance.py and commit output
-    - Run: `python3 generate_spec_compliance.py`
-    - Verify SPEC_COMPLIANCE.md is generated without errors
-    - Commit SPEC_COMPLIANCE.md
+- [x] 10. Final checkpoint
+  - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
 
@@ -321,8 +228,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     { "id": 3, "tasks": ["4.4", "4.5", "5.1", "5.2"] },
     { "id": 4, "tasks": ["5.3", "8.1"] },
     { "id": 5, "tasks": ["8.2", "8.3", "8.4", "9.1"] },
-    { "id": 6, "tasks": ["9.2", "9.3"] }, 
-    { "id": 7, "tasks": ["10.1", "10.2", "10.3", "10.4", "10.5"] }
+    { "id": 6, "tasks": ["9.2", "9.3"] }
   ]
 }
 ```

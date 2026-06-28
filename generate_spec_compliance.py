@@ -1,199 +1,234 @@
 #!/usr/bin/env python3
-"""SPEC_COMPLIANCE.md generator script.
-
-Reads .kiro/specs/tasks.md, parses task checkboxes, verifies artifact
-existence using a keyword-to-file mapping, and outputs a compliance
-report as a 4-column Markdown table.
-
-Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
-"""
+"""Generate SPEC_COMPLIANCE.md by parsing tasks.md and verifying artifacts exist."""
 
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Project root is where this script lives
+PROJECT_ROOT = Path(__file__).resolve().parent
 
-# Keyword-to-file mapping table (Requirement 8.3)
+# Default tasks.md path (relative to project root)
+DEFAULT_TASKS_MD = ".kiro/specs/savings-tracker-localstack/tasks.md"
+
+# Output file
+OUTPUT_PATH = PROJECT_ROOT / "SPEC_COMPLIANCE.md"
+
+# Keyword-to-file mapping table per requirements 8.3
+# Each entry: (keyword_pattern, artifact_path_or_check_type)
 KEYWORD_MAPPING = [
-    (["requirements"], ".kiro/specs/requirements.md"),
-    (["design"], ".kiro/specs/design.md"),
-    (["fixture"], "fixtures/"),
-    (["mcp", "MCP"], "mcp_server/aws_janitor_mcp.py"),
-    (["FinOps", "finops"], "agents/finops_auditor.py"),
-    (["SecOps", "secops"], "agents/secops_guard.py"),
-    (["Remediation", "remediation"], "agents/remediation_architect.py"),
-    (["rollback"], "rollbacks/"),
-    (["findings_store"], "findings_store.json"),
-    (["pre-remediation"], ".kiro/hooks/pre-remediation.sh"),
-    (["post-remediation"], ".kiro/hooks/post-remediation.sh"),
-    (["approval"], "__APPROVE_STRING_CHECK__"),
-    (["audit log"], "__AUDIT_LOG_CHECK__"),
-    (["Streamlit", "UI", "app.py"], "app.py"),
-    (["savings"], "savings.py"),
+    (r"\brequirements\b", ".kiro/specs/requirements.md"),
+    (r"\bdesign\b", ".kiro/specs/design.md"),
+    (r"\bfixture\b", "fixtures/"),
+    (r"(?i)\bmcp\b|mcp_|_mcp", "mcp_server/aws_janitor_mcp.py"),
+    (r"\bFinOps\b|\bfinops\b", "agents/finops_auditor.py"),
+    (r"\bSecOps\b|\bsecops\b", "agents/secops_guard.py"),
+    (r"\bpre-remediation\b", ".kiro/hooks/pre-remediation.sh"),
+    (r"\bpost-remediation\b", ".kiro/hooks/post-remediation.sh"),
+    (r"\bRemediation\b|\bremediation\b", "agents/remediation_architect.py"),
+    (r"\brollback\b", "rollbacks/"),
+    (r"\bfindings_store\b", "findings_store.json"),
+    (r"\bapproval\b", "__approval_check__"),
+    (r"\baudit log\b", "__audit_log_check__"),
+    (r"\bStreamlit\b|\bUI\b|\bapp\.py\b", "app.py"),
+    (r"\bsavings\b", "savings.py"),
 ]
 
 
-def find_tasks_md_files(project_root: Path) -> list[Path]:
-    """Find tasks.md file(s), trying the literal path first then subdirectories."""
-    # Try literal path from requirement
-    literal = project_root / ".kiro" / "specs" / "tasks.md"
-    if literal.exists():
-        return [literal]
+def find_tasks_md(spec_path: str | None = None) -> Path | None:
+    """Find the tasks.md file.
 
-    # Search subdirectories of .kiro/specs/
-    specs_dir = project_root / ".kiro" / "specs"
+    If spec_path is provided (command-line arg), use it directly.
+    Otherwise use the default path. If that doesn't exist, search for
+    the first tasks.md under .kiro/specs/.
+    """
+    if spec_path:
+        candidate = PROJECT_ROOT / spec_path
+        return candidate if candidate.exists() else None
+
+    # Try default path first
+    default = PROJECT_ROOT / DEFAULT_TASKS_MD
+    if default.exists():
+        return default
+
+    # Search for any tasks.md in .kiro/specs/
+    specs_dir = PROJECT_ROOT / ".kiro" / "specs"
     if specs_dir.exists():
-        found = sorted(specs_dir.rglob("tasks.md"))
-        if found:
-            return found
+        matches = list(specs_dir.rglob("tasks.md"))
+        if matches:
+            return matches[0]
 
-    return []
+    return None
 
 
 def parse_tasks(content: str) -> list[dict]:
-    """Parse checkbox lines from tasks.md content.
+    """Parse tasks.md content and extract checkbox lines with their status.
 
-    Returns a list of dicts with keys: text, status
-    where status is 'done', 'pending', or 'partial'.
+    Returns a list of dicts with keys: number, task, status_char, status_display.
     """
     tasks = []
-    # Match all checkbox task lines (including indented sub-tasks)
-    # Pattern: lines with "- [x]", "- [ ]", or "- [-]" with optional leading whitespace
-    pattern = re.compile(r"^\s*- \[([ x\-])\]\s+(.+)$", re.MULTILINE)
+    # Match lines like: - [x] Some task description
+    # Supports: [x] done, [ ] pending, [-] partial, [~] partial
+    pattern = re.compile(r"^\s*-\s+\[([x \-~])\]\s+(.+)$")
+    counter = 0
 
-    for match in pattern.finditer(content):
-        marker = match.group(1)
-        text = match.group(2).strip()
+    for line in content.splitlines():
+        match = pattern.match(line)
+        if match:
+            counter += 1
+            status_char = match.group(1)
+            task_text = match.group(2).strip()
 
-        if marker == "x":
-            status = "done"
-        elif marker == "-":
-            status = "partial"
-        else:
-            status = "pending"
+            if status_char == "x":
+                status_display = "✅ Done"
+            elif status_char == " ":
+                status_display = "❌ Pending"
+            elif status_char in ("-", "~"):
+                status_display = "⚠️ Partial"
+            else:
+                status_display = "❌ Pending"
 
-        tasks.append({"text": text, "status": status})
+            tasks.append({
+                "number": counter,
+                "task": task_text,
+                "status_char": status_char,
+                "status_display": status_display,
+            })
 
     return tasks
 
 
-def check_approve_string(project_root: Path) -> bool:
-    """Check if 'APPROVE' string exists in agents/ files or orchestrator.py."""
-    # Check orchestrator.py
-    orchestrator = project_root / "orchestrator.py"
-    if orchestrator.exists():
-        content = orchestrator.read_text(encoding="utf-8", errors="ignore")
-        if "APPROVE" in content:
-            return True
+def _check_file_or_dir(artifact_path: str) -> tuple[bool, str]:
+    """Check if a file or directory exists.
 
-    # Check agents/ directory
-    agents_dir = project_root / "agents"
-    if agents_dir.exists():
-        for py_file in agents_dir.glob("*.py"):
-            content = py_file.read_text(encoding="utf-8", errors="ignore")
-            if "APPROVE" in content:
-                return True
+    For .kiro/specs/requirements.md and .kiro/specs/design.md, also check
+    subdirectories if the direct path doesn't exist.
 
-    return False
-
-
-def check_audit_log(project_root: Path) -> bool:
-    """Check if audit.log exists or an audit log writer is in the codebase."""
-    # Check audit.log file
-    if (project_root / "audit.log").exists():
-        return True
-
-    # Check for audit log writer in codebase (agents/ directory)
-    agents_dir = project_root / "agents"
-    if agents_dir.exists():
-        for py_file in agents_dir.glob("*.py"):
-            content = py_file.read_text(encoding="utf-8", errors="ignore")
-            if "audit" in content.lower() and ("log" in content.lower() or "logger" in content.lower()):
-                return True
-
-    # Check orchestrator.py
-    orchestrator = project_root / "orchestrator.py"
-    if orchestrator.exists():
-        content = orchestrator.read_text(encoding="utf-8", errors="ignore")
-        if "audit" in content.lower() and ("log" in content.lower() or "logger" in content.lower()):
-            return True
-
-    return False
-
-
-def verify_artifact(task_text: str, project_root: Path) -> str:
-    """Verify artifact existence for a task based on keyword mapping.
-
-    Returns a description of the verification result.
+    Returns (exists, description).
     """
-    for keywords, target in KEYWORD_MAPPING:
-        matched_keyword = None
-        for kw in keywords:
-            if kw in task_text:
-                matched_keyword = kw
-                break
+    full_path = PROJECT_ROOT / artifact_path
 
-        if matched_keyword is None:
-            continue
+    if full_path.exists():
+        return True, f"`{artifact_path}` exists"
 
-        # Special checks
-        if target == "__APPROVE_STRING_CHECK__":
-            if check_approve_string(project_root):
-                return '"APPROVE" found in codebase'
-            else:
-                return '"APPROVE" not found in codebase'
+    # For requirements.md and design.md, also check subdirectories
+    if artifact_path in (".kiro/specs/requirements.md", ".kiro/specs/design.md"):
+        filename = Path(artifact_path).name
+        specs_dir = PROJECT_ROOT / ".kiro" / "specs"
+        if specs_dir.exists():
+            matches = list(specs_dir.rglob(filename))
+            if matches:
+                rel = matches[0].relative_to(PROJECT_ROOT)
+                return True, f"`{rel}` exists"
 
-        if target == "__AUDIT_LOG_CHECK__":
-            if check_audit_log(project_root):
-                return "audit log writer found"
-            else:
-                return "audit log not found"
-
-        # File or directory check
-        artifact_path = project_root / target
-        if artifact_path.exists():
-            return f"{target} exists"
-
-        # For files under .kiro/specs/, also check subdirectories
-        if target.startswith(".kiro/specs/") and not artifact_path.is_dir():
-            filename = Path(target).name
-            specs_dir = project_root / ".kiro" / "specs"
-            for found in specs_dir.rglob(filename):
-                rel = str(found.relative_to(project_root)).replace("\\", "/")
-                return f"{rel} exists"
-
-        return f"{target} missing"
-
-    return "no mapping"
+    return False, f"`{artifact_path}` missing"
 
 
-def generate_report(tasks: list[dict], project_root: Path) -> str:
-    """Generate the SPEC_COMPLIANCE.md content."""
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+def _check_approval_keyword() -> tuple[bool, str]:
+    """Check if APPROVE keyword exists in agents/ or orchestrator.py."""
+    orchestrator = PROJECT_ROOT / "orchestrator.py"
+    if orchestrator.exists():
+        try:
+            content = orchestrator.read_text(encoding="utf-8", errors="ignore")
+            if "APPROVE" in content:
+                return True, "`orchestrator.py` contains APPROVE"
+        except OSError:
+            pass
+
+    agents_dir = PROJECT_ROOT / "agents"
+    if agents_dir.exists():
+        for py_file in agents_dir.glob("*.py"):
+            try:
+                content = py_file.read_text(encoding="utf-8", errors="ignore")
+                if "APPROVE" in content:
+                    return True, f"`agents/{py_file.name}` contains APPROVE"
+            except OSError:
+                continue
+
+    return False, "`APPROVE` keyword missing"
+
+
+def _check_audit_log() -> tuple[bool, str]:
+    """Check if audit.log exists or an audit log writer is in the codebase."""
+    audit_log = PROJECT_ROOT / "audit.log"
+    if audit_log.exists():
+        return True, "`audit.log` exists"
+
+    # Check for audit logger module
+    audit_logger = PROJECT_ROOT / "agents" / "audit_logger.py"
+    if audit_logger.exists():
+        return True, "`agents/audit_logger.py` exists"
+
+    # Check for audit log writer in the codebase
+    agents_dir = PROJECT_ROOT / "agents"
+    if agents_dir.exists():
+        for py_file in agents_dir.glob("*.py"):
+            try:
+                content = py_file.read_text(encoding="utf-8", errors="ignore")
+                if "audit" in content.lower() and "log" in content.lower():
+                    return True, f"`agents/{py_file.name}` contains audit log writer"
+            except OSError:
+                continue
+
+    orchestrator = PROJECT_ROOT / "orchestrator.py"
+    if orchestrator.exists():
+        try:
+            content = orchestrator.read_text(encoding="utf-8", errors="ignore")
+            if "audit" in content.lower() and "log" in content.lower():
+                return True, "`orchestrator.py` contains audit log writer"
+        except OSError:
+            pass
+
+    return False, "`audit.log` missing"
+
+
+def verify_artifact(task_text: str) -> str:
+    """Check if an artifact corresponding to the task exists.
+
+    Returns a description of the artifact status:
+    - "<path> exists" if found
+    - "<path> missing" if not found
+    - "—" if no keyword mapping matches
+    """
+    for keyword_pattern, artifact_path in KEYWORD_MAPPING:
+        if re.search(keyword_pattern, task_text):
+            # Special check for "approval" keyword
+            if artifact_path == "__approval_check__":
+                _, description = _check_approval_keyword()
+                return description
+
+            # Special check for "audit log" keyword
+            if artifact_path == "__audit_log_check__":
+                _, description = _check_audit_log()
+                return description
+
+            # Standard file/directory existence check
+            _, description = _check_file_or_dir(artifact_path)
+            return description
+
+    return "—"
+
+
+def generate_compliance_report(tasks: list[dict]) -> str:
+    """Generate the SPEC_COMPLIANCE.md content as a 4-column Markdown table."""
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     lines = [
         "# Spec Compliance Report",
         "",
-        f"Generated: {now}",
+        f"Generated: {timestamp}",
         "",
         "| # | Task | Status | Artifact Verified |",
         "|---|------|--------|-------------------|",
     ]
 
-    for i, task in enumerate(tasks, start=1):
-        task_text = task["text"]
-        status = task["status"]
-
-        if status == "done":
-            artifact_info = verify_artifact(task_text, project_root)
-            status_display = "✅ Done"
-        elif status == "partial":
-            artifact_info = verify_artifact(task_text, project_root)
-            status_display = "⏳ Partial"
+    for task in tasks:
+        # Verify artifacts for done tasks; for pending/partial show dash
+        if task["status_char"] == "x":
+            artifact_status = verify_artifact(task["task"])
         else:
-            status_display = "❌ Pending"
-            artifact_info = "—"
+            artifact_status = "—"
 
         # Clean task text for table display (remove trailing requirement refs)
         display_text = task_text.rstrip()
@@ -203,39 +238,40 @@ def generate_report(tasks: list[dict], project_root: Path) -> str:
         # Escape pipe characters to avoid breaking markdown table structure
         display_text = display_text.replace("|", "\\|")
 
-        lines.append(f"| {i} | {display_text} | {status_display} | {artifact_info} |")
+        lines.append(
+            f"| {task['number']} | {task_text} | {task['status_display']} | {artifact_status} |"
+        )
 
     lines.append("")
     return "\n".join(lines)
 
 
-def main():
-    project_root = Path(__file__).resolve().parent
+def main() -> int:
+    """Main entry point."""
+    # Accept optional command-line argument for tasks.md path
+    spec_path = sys.argv[1] if len(sys.argv) > 1 else None
 
-    # Find tasks.md
-    tasks_md_files = find_tasks_md_files(project_root)
-    if not tasks_md_files:
-        print("ERROR: tasks.md not found in .kiro/specs/", file=sys.stderr)
-        sys.exit(1)
+    tasks_md_path = find_tasks_md(spec_path)
 
-    # Read and parse all found tasks.md files
-    all_tasks = []
-    for tasks_md_path in tasks_md_files:
-        content = tasks_md_path.read_text(encoding="utf-8")
-        all_tasks.extend(parse_tasks(content))
+    if tasks_md_path is None:
+        print(
+            "Error: tasks.md not found. Provide path as argument or ensure "
+            f"{DEFAULT_TASKS_MD} exists.",
+            file=sys.stderr,
+        )
+        return 1
 
-    if not all_tasks:
-        print("WARNING: No task checkboxes found in tasks.md", file=sys.stderr)
+    content = tasks_md_path.read_text(encoding="utf-8")
+    tasks = parse_tasks(content)
 
-    # Generate report
-    report = generate_report(all_tasks, project_root)
+    if not tasks:
+        print("Warning: No tasks found in tasks.md", file=sys.stderr)
 
-    # Write output
-    output_path = project_root / "SPEC_COMPLIANCE.md"
-    output_path.write_text(report, encoding="utf-8")
-
-    print(f"Generated {output_path} ({len(all_tasks)} tasks from {len(tasks_md_files)} file(s))")
+    report = generate_compliance_report(tasks)
+    OUTPUT_PATH.write_text(report, encoding="utf-8")
+    print(f"Generated {OUTPUT_PATH.name} with {len(tasks)} tasks.")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
