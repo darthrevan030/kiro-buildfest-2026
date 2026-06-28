@@ -39,3 +39,6 @@ policies/*.json
 # OS
 .DS_Store
 Thumbs.db
+
+# kiro steering local
+.kiro/steering/local/
