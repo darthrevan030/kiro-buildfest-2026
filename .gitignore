@@ -18,19 +18,19 @@ venv/
 *.tfplan
 
 # Runtime outputs
-audit.log
-findings_store.json
+output/logs/audit.log
+output/findings_store.json
 findings_store_*.json
-scan_history.json
-scan_history.json.tmp
-savings_ledger.json
-scheduler.log
-scheduler.log.*
-agent_reasoning.log
-rollbacks/*
-!rollbacks/.gitkeep
-policies/*.json
-remediation.tf
+output/scan_history.json
+output/scan_history.json.tmp
+output/savings_ledger.json
+output/logs/scheduler.log
+output/logs/scheduler.log.*
+output/logs/agent_reasoning.log
+output/rollbacks/*
+!output/rollbacks/.gitkeep
+output/policies/*.json
+output/remediation.tf
 
 # IDE
 .vscode/settings.json

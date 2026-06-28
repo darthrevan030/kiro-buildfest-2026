@@ -408,11 +408,11 @@ div[data-testid="stMetric"] {
 # ──────────────────────────────────────────────────────────────────────
 
 PROJECT_ROOT = Path(__file__).parent
-FINDINGS_STORE_PATH = PROJECT_ROOT / "findings_store.json"
+FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
 REMEDIATION_PATH = PROJECT_ROOT / "output" / "remediation.tf"
-ROLLBACKS_DIR = PROJECT_ROOT / "rollbacks"
-AUDIT_LOG_PATH = PROJECT_ROOT / "audit.log"
-REASONING_LOG_PATH = PROJECT_ROOT / "agent_reasoning.log"
+ROLLBACKS_DIR = PROJECT_ROOT / "output" / "rollbacks"
+AUDIT_LOG_PATH = PROJECT_ROOT / "output" / "logs" / "audit.log"
+REASONING_LOG_PATH = PROJECT_ROOT / "output" / "logs" / "agent_reasoning.log"
 
 _STREAMLIT_HAS_FRAGMENT = Version(st.__version__) >= Version("1.33.0")
 

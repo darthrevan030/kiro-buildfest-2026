@@ -63,7 +63,8 @@ class JanitorScheduler:
 
         # Avoid duplicate handlers on re-init
         if not logger.handlers:
-            log_path = self._project_root / "scheduler.log"
+            log_path = self._project_root / "output" / "logs" / "scheduler.log"
+            log_path.parent.mkdir(parents=True, exist_ok=True)
             handler = RotatingFileHandler(
                 str(log_path),
                 maxBytes=10 * 1024 * 1024,  # 10MB

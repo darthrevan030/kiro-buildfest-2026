@@ -49,9 +49,10 @@ class DriftDetector:
     ):
         if history_path is None:
             project_root = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            self._history_path = project_root / "scan_history.json"
+            self._history_path = project_root / "output" / "scan_history.json"
         else:
             self._history_path = Path(history_path)
+        self._history_path.parent.mkdir(parents=True, exist_ok=True)
 
         self._max_snapshots = max_snapshots
         self._model = model

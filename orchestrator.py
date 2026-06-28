@@ -48,11 +48,11 @@ from savings import SavingsTracker
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
 PROJECT_ROOT = Path(__file__).parent
-FINDINGS_STORE_PATH = PROJECT_ROOT / "findings_store.json"
+FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
 HOOKS_DIR = PROJECT_ROOT / "scripts" / "hooks"
 OUTPUT_DIR = PROJECT_ROOT / "output"
-ROLLBACKS_DIR = PROJECT_ROOT / "rollbacks"
-AUDIT_LOG_PATH = PROJECT_ROOT / "audit.log"
+ROLLBACKS_DIR = PROJECT_ROOT / "output" / "rollbacks"
+AUDIT_LOG_PATH = PROJECT_ROOT / "output" / "logs" / "audit.log"
 
 
 @dataclass
@@ -133,16 +133,20 @@ class Orchestrator:
         approver: str = "system",
     ):
         self.project_root = project_root or PROJECT_ROOT
-        self.findings_store_path = self.project_root / "findings_store.json"
+        self.findings_store_path = self.project_root / "output" / "findings_store.json"
+        # Ensure output directories exist
+        (self.project_root / "output" / "logs").mkdir(parents=True, exist_ok=True)
+        (self.project_root / "output" / "rollbacks").mkdir(parents=True, exist_ok=True)
+        (self.project_root / "output" / "policies").mkdir(parents=True, exist_ok=True)
         self.hooks_dir = self.project_root / "scripts" / "hooks"
         self.output_dir = self.project_root / "output"
-        self.rollbacks_dir = self.project_root / "rollbacks"
-        self.audit_log_path = self.project_root / "audit.log"
+        self.rollbacks_dir = self.project_root / "output" / "rollbacks"
+        self.audit_log_path = self.project_root / "output" / "logs" / "audit.log"
         self.approver = approver
 
         # Reasoning logger (shared across all agents)
         self._reasoning_logger = ReasoningLogger(
-            log_path=self.project_root / "agent_reasoning.log"
+            log_path=self.project_root / "output" / "logs" / "agent_reasoning.log"
         )
 
         # Agent instances
@@ -168,12 +172,12 @@ class Orchestrator:
         self._query_interpreter = QueryInterpreter()
         self._anomaly_detector = AnomalyDetector()
         self._drift_detector = DriftDetector(
-            history_path=self.project_root / "scan_history.json"
+            history_path=self.project_root / "output" / "scan_history.json"
         )
 
         # Savings tracker
         self._savings_tracker = SavingsTracker(
-            ledger_path=self.project_root / "savings_ledger.json",
+            ledger_path=self.project_root / "output" / "savings_ledger.json",
             findings_store_path=self.findings_store_path,
         )
 

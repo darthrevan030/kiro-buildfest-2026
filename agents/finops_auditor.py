@@ -27,7 +27,7 @@ from agents.reasoning_logger import ReasoningLogger
 
 # Project root for output files
 PROJECT_ROOT = Path(__file__).parent.parent
-FINDINGS_STORE_PATH = PROJECT_ROOT / "findings_store.json"
+FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
 
 
 class FinOpsAuditor:
@@ -215,6 +215,7 @@ class FinOpsAuditor:
             },
         }
 
+        self.findings_store_path.parent.mkdir(parents=True, exist_ok=True)
         self.findings_store_path.write_text(json.dumps(store, indent=2))
         return store
 

@@ -35,7 +35,7 @@ DATABASE_CACHE_PORTS = {3306, 5432, 6379, 27017}
 
 # Project root for output files
 PROJECT_ROOT = Path(__file__).parent.parent
-FINDINGS_STORE_PATH = PROJECT_ROOT / "findings_store.json"
+FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
 
 
 class SecOpsGuard:

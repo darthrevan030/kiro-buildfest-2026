@@ -29,9 +29,9 @@ from agents.reasoning_logger import ReasoningLogger
 
 # Project root for output files
 PROJECT_ROOT = Path(__file__).parent.parent
-FINDINGS_STORE_PATH = PROJECT_ROOT / "findings_store.json"
+FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
 OUTPUT_DIR = PROJECT_ROOT / "output"
-ROLLBACKS_DIR = PROJECT_ROOT / "rollbacks"
+ROLLBACKS_DIR = PROJECT_ROOT / "output" / "rollbacks"
 
 
 def _sanitize_id(resource_id: str) -> str:

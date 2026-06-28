@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T17:31:48Z
+Generated: 2026-06-28T17:59:31Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -18,7 +18,7 @@ Generated: 2026-06-28T17:31:48Z
 | 12 | 2. SecOps Guard — calls MCP, appends to findings_store.json | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 13 | 3. Remediation Architect — reads findings, dependency check, generates HCL | ✅ Done | agents/remediation_architect.py exists |
 | 14 | 4. Rollback HCL generation (alongside remediation, not after) | ✅ Done | agents/remediation_architect.py exists |
-| 15 | 5. findings_store.json schema validation | ✅ Done | findings_store.json exists |
+| 15 | 5. findings_store.json schema validation | ✅ Done | findings_store.json missing |
 | 16 | 1. pre-remediation.sh — terraform validate gate | ✅ Done | agents/remediation_architect.py exists |
 | 17 | 2. post-remediation.sh — audit.log append | ✅ Done | agents/remediation_architect.py exists |
 | 18 | 3. Wire hooks into orchestrator call sequence | ✅ Done | no mapping |
@@ -105,7 +105,7 @@ Generated: 2026-06-28T17:31:48Z
 | 99 | 6.4 Create `agents/README.md` | ✅ Done | no mapping |
 | 100 | 6.5 Create `fixtures/README.md` | ✅ Done | fixtures/ exists |
 | 101 | 6.6 Create `tests/README.md` | ✅ Done | no mapping |
-| 102 | 6.7 Create `output/README.md` and `rollbacks/README.md` | ✅ Done | rollbacks/ exists |
+| 102 | 6.7 Create `output/README.md` and `rollbacks/README.md` | ✅ Done | rollbacks/ missing |
 | 103 | 7. Final checkpoint - Ensure all tests pass | ✅ Done | no mapping |
 | 104 | 1. Implement Savings Tracker core module | ✅ Done | no mapping |
 | 105 | 1.1 Create `savings.py` with SavingsTracker class | ✅ Done | savings.py exists |
