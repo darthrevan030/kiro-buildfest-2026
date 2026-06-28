@@ -224,13 +224,13 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Return safe default on internal failure
     - _Requirements: 11.3, 11.7, 11.8, 11.9_
 
-  - [ ] 8.4 Add MCP tool `infer_resource_context` to `mcp_server/aws_janitor_mcp.py`
+  - [x] 8.4 Add MCP tool `infer_resource_context` to `mcp_server/aws_janitor_mcp.py`
     - Decorator `@mcp.tool()`, accepts `resource_id`, `resource_name`, `existing_tags` (optional, defaults to {})
     - Import via `from agents.tagger import ResourceTagger`
     - Return safe default on internal failure
     - _Requirements: 11.4, 11.7, 11.8, 11.9_
 
-  - [ ] 8.5 Add MCP tool `detect_anomalies` to `mcp_server/aws_janitor_mcp.py`
+  - [-] 8.5 Add MCP tool `detect_anomalies` to `mcp_server/aws_janitor_mcp.py`
     - Decorator `@mcp.tool()`, accepts `resources: list`, `findings: list`
     - Import via `from agents.anomaly_detector import AnomalyDetector`
     - Return safe default on internal failure
