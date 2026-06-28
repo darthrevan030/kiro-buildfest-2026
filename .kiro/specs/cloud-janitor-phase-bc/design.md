@@ -1012,7 +1012,7 @@ BEGIN
                     "status": "success",
                     "error": None
                 })
-            EXCEPT Exception AS e:
+            EXCEPT (Exception, concurrent.futures.TimeoutError, concurrent.futures.CancelledError) AS e:
                 by_account.append({
                     "account_id": account["account_id"],
                     "account_name": account["account_name"],
@@ -1074,7 +1074,7 @@ def start(self) -> None:
 - `get_status()` returns running=True
 - Scheduler shuts down cleanly on application exit
 - If no scan has run today, runs one immediately on start
-- Multiple `start()` calls are idempotent (stops previous, starts new)t()` calls are idempotent (stops previous, starts new)
+- Multiple `start()` calls are idempotent (stops previous, starts new)
 
 **Algorithm:**
 
