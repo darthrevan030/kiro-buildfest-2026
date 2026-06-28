@@ -335,3 +335,181 @@ class TestDriftDetectorFindingDiffCorrectness:
             f"new_findings keys mismatch.\n"
             f"Expected: {expected_new_keys}\nGot: {actual_new_keys}"
         )
+
+
+    @given(
+        prev_findings=unique_findings_strategy(min_size=0, max_size=8),
+        curr_findings=unique_findings_strategy(min_size=0, max_size=8),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_resolved_findings_are_in_previous_not_current(self, tmp_path, prev_findings, curr_findings):
+        """resolved_findings contains exactly the findings in previous but not in current."""
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "Some findings resolved."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", prev_findings, [], 10.0)
+            detector.save_snapshot("scan-curr", curr_findings, [], 20.0)
+            result = detector.detect(curr_findings)
+
+        prev_keys = {
+            (f["resource_id"], f["check_type"]) for f in prev_findings
+            if f.get("resource_id") and f.get("check_type")
+        }
+        curr_keys = {
+            (f["resource_id"], f["check_type"]) for f in curr_findings
+            if f.get("resource_id") and f.get("check_type")
+        }
+        expected_resolved_keys = prev_keys - curr_keys
+
+        actual_resolved_keys = {
+            (f["resource_id"], f["check_type"]) for f in result["resolved_findings"]
+        }
+        assert actual_resolved_keys == expected_resolved_keys, (
+            f"resolved_findings keys mismatch.\n"
+            f"Expected: {expected_resolved_keys}\nGot: {actual_resolved_keys}"
+        )
+
+    @given(findings=unique_findings_strategy(min_size=1, max_size=8))
+    @settings(max_examples=200, deadline=None)
+    def test_identical_snapshots_produce_no_diff(self, tmp_path, findings):
+        """When both snapshots have the same findings, new and resolved are both empty."""
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "No drift."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", findings, [], 10.0)
+            detector.save_snapshot("scan-curr", findings, [], 10.0)
+            result = detector.detect(findings)
+
+        assert result["new_findings"] == [], (
+            f"With identical findings, new_findings should be [], got {result['new_findings']}"
+        )
+        assert result["resolved_findings"] == [], (
+            f"With identical findings, resolved_findings should be [], got {result['resolved_findings']}"
+        )
+
+
+    @given(findings=unique_findings_strategy(min_size=1, max_size=8))
+    @settings(max_examples=200, deadline=None)
+    def test_all_new_when_previous_empty(self, tmp_path, findings):
+        """When previous has no findings and current has some, all are new."""
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "All new findings."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", [], [], 0.0)
+            detector.save_snapshot("scan-curr", findings, [], 10.0)
+            result = detector.detect(findings)
+
+        expected_new_keys = {
+            (f["resource_id"], f["check_type"]) for f in findings
+            if f.get("resource_id") and f.get("check_type")
+        }
+        actual_new_keys = {
+            (f["resource_id"], f["check_type"]) for f in result["new_findings"]
+        }
+        assert actual_new_keys == expected_new_keys, (
+            f"All findings should be new. Expected: {expected_new_keys}\nGot: {actual_new_keys}"
+        )
+        assert result["resolved_findings"] == []
+
+    @given(findings=unique_findings_strategy(min_size=1, max_size=8))
+    @settings(max_examples=200, deadline=None)
+    def test_all_resolved_when_current_empty(self, tmp_path, findings):
+        """When current has no findings and previous had some, all are resolved."""
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "All findings resolved."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", findings, [], 10.0)
+            detector.save_snapshot("scan-curr", [], [], 0.0)
+            result = detector.detect([])
+
+        expected_resolved_keys = {
+            (f["resource_id"], f["check_type"]) for f in findings
+            if f.get("resource_id") and f.get("check_type")
+        }
+        actual_resolved_keys = {
+            (f["resource_id"], f["check_type"]) for f in result["resolved_findings"]
+        }
+        assert actual_resolved_keys == expected_resolved_keys, (
+            f"All findings should be resolved. Expected: {expected_resolved_keys}\n"
+            f"Got: {actual_resolved_keys}"
+        )
+        assert result["new_findings"] == []
+
+
+# ---------------------------------------------------------------------------
+# Property 17: DriftDetector Output Schema
+# ---------------------------------------------------------------------------
+
+
+class TestDriftDetectorOutputSchema:
+    """Property 17: DriftDetector Output Schema.
+
+    **Validates: Requirements 8.8**
+
+    For history with >=2 snapshots, returns dict with all required keys
+    and correct types.
+    """
+
+    @given(
+        prev_findings=unique_findings_strategy(min_size=0, max_size=5),
+        curr_findings=unique_findings_strategy(min_size=0, max_size=5),
+        w_prev=st.floats(min_value=0.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+        w_curr=st.floats(min_value=0.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+        scan_id_prev=st.text(min_size=1, max_size=20, alphabet=st.characters(
+            whitelist_categories=("L", "N"), whitelist_characters="-_"
+        )),
+        scan_id_curr=st.text(min_size=1, max_size=20, alphabet=st.characters(
+            whitelist_categories=("L", "N"), whitelist_characters="-_"
+        )),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_output_has_all_required_keys(
+        self, tmp_path, prev_findings, curr_findings, w_prev, w_curr,
+        scan_id_prev, scan_id_curr,
+    ):
+        """detect() output has exactly the 6 required keys."""
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "Schema test narrative."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot(scan_id_prev, prev_findings, [], w_prev)
+            detector.save_snapshot(scan_id_curr, curr_findings, [], w_curr)
+            result = detector.detect(curr_findings)
+
+        assert set(result.keys()) == REQUIRED_DRIFT_KEYS, (
+            f"Expected keys {REQUIRED_DRIFT_KEYS}, got {set(result.keys())}"
+        )
