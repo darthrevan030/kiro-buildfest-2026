@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T02:47:46Z
+Generated: 2026-06-28T02:49:29Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -55,8 +55,8 @@ Generated: 2026-06-28T02:47:46Z
 | 49 | 6.1 Add new dependencies to `requirements.txt` | ✅ Done | .kiro/specs/cloud-janitor/requirements.md exists |
 | 50 | 6.2 Rewrite `README.md` at project root as a product README | ✅ Done | no mapping |
 | 51 | 6.3 Update `mcp_server/README.md` with provider architecture documentation | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
-| 52 | 6.4 Create `agents/README.md` | ⏳ Partial | no mapping |
-| 53 | 6.5 Create `fixtures/README.md` | ❌ Pending | — |
+| 52 | 6.4 Create `agents/README.md` | ✅ Done | no mapping |
+| 53 | 6.5 Create `fixtures/README.md` | ⏳ Partial | fixtures/ exists |
 | 54 | 6.6 Create `tests/README.md` | ❌ Pending | — |
 | 55 | 6.7 Create `output/README.md` and `rollbacks/README.md` | ❌ Pending | — |
 | 56 | 7. Final checkpoint - Ensure all tests pass | ❌ Pending | — |

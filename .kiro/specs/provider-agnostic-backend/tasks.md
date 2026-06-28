@@ -113,7 +113,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
       - **findings_store.json schema** section: full annotated JSON schema for the shared state file
     - _Requirements: 9.1_
 
-  - [ ] 6.5 Create `fixtures/README.md`
+  - [x] 6.5 Create `fixtures/README.md`
     - Document the purpose of fixture files (fake AWS data — no credentials required)
     - Document `aws_cost_explorer.json` schema: full annotated example with every field, type, and valid values; type-specific fields table (elasticache/ebs/ec2)
     - Document `aws_config_inspector.json` schema: findings array schema, dependencies map schema, check_type values, severity enum
