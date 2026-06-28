@@ -160,7 +160,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - For history with ≥2 snapshots, returns dict with all required keys and correct types
     - **Validates: Requirements 8.3, 8.4, 8.5, 8.8**
 
-- [ ] 6. Implement Phase C platform agents (MultiAccountOrchestrator, JanitorScheduler)
+- [x] 6. Implement Phase C platform agents (MultiAccountOrchestrator, JanitorScheduler)
   - [x] 6.1 Implement `agents/multi_account_orchestrator.py`
     - Create `MultiAccountOrchestrator` class with `run_all() -> dict` and `load_accounts() -> list[dict]`
     - Load accounts from `accounts.json`; return empty result if file missing/invalid/entries missing required fields
@@ -202,11 +202,11 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Multiple start() calls result in exactly one running scheduler
     - **Validates: Requirements 10.4, 10.5**
 
-- [ ] 7. Checkpoint - Ensure all Phase C agent tests pass
+- [x] 7. Checkpoint - Ensure all Phase C agent tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 8. Wire MCP tools and orchestrator integration
-  - [ ] 8.1 Add MCP tool `interpret_query` to `mcp_server/aws_janitor_mcp.py`
+  - [x] 8.1 Add MCP tool `interpret_query` to `mcp_server/aws_janitor_mcp.py`
     - Decorator `@mcp.tool()`, accepts `user_query: str`, returns ScanParameters dict
     - Import via `from agents.query_interpreter import QueryInterpreter` (direct import, no network transport)
     - Catch parameter validation errors and return error response without crashing server
