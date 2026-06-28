@@ -164,3 +164,33 @@ class TestDriftDetectorMaxSnapshotsInvariant:
         assert len(data) == MAX_SNAPSHOTS, (
             f"After {num_calls} > 30 saves, history should be exactly 30, got {len(data)}"
         )
+
+
+    @given(
+        num_calls=st.integers(min_value=1, max_value=50),
+        max_snapshots=st.integers(min_value=1, max_value=30),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_oldest_entries_are_dropped(self, num_calls, max_snapshots):
+        """Rotation drops the oldest entries, keeping the most recent ones."""
+        history_path = _fresh_history_path()
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path, max_snapshots=max_snapshots)
+            for i in range(num_calls):
+                detector.save_snapshot(f"scan-{i:04d}", [], [], float(i))
+
+        data = json.loads(history_path.read_text())
+        # The last entry should always be the most recently saved
+        assert data[-1]["scan_id"] == f"scan-{num_calls - 1:04d}", (
+            f"Last entry should be scan-{num_calls - 1:04d}, got {data[-1]['scan_id']}"
+        )
+        # If we exceeded max, the first entry should be the oldest retained
+        if num_calls > max_snapshots:
+            expected_first_id = f"scan-{num_calls - max_snapshots:04d}"
+            assert data[0]["scan_id"] == expected_first_id, (
+                f"First entry should be {expected_first_id}, got {data[0]['scan_id']}"
+            )
