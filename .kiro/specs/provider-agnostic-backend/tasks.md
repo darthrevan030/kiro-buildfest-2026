@@ -28,7 +28,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - **Validates: Requirements 2.2, 2.3, 2.4, 2.6, 2.7, 2.8, 2.9**
 
 - [ ] 2. Implement stub providers
-  - [ ] 2.1 Implement AWSProvider in `mcp_server/backends/aws_provider.py`
+  - [x] 2.1 Implement AWSProvider in `mcp_server/backends/aws_provider.py`
     - Lazy import of boto3 in `__init__` with ImportError handling and helpful install message
     - All methods raise `NotImplementedError` with descriptive messages
     - Include IAM permission documentation in method docstrings

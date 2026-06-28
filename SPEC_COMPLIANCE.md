@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T01:52:10Z
+Generated: 2026-06-28T01:56:16Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -37,10 +37,10 @@ Generated: 2026-06-28T01:52:10Z
 | 31 | 4. Rehearse 6-min demo script 3x | ❌ Pending | — |
 | 32 | 5. Record demo video for Devpost submission | ❌ Pending | — |
 | 33 | 6. Write Devpost submission copy | ❌ Pending | — |
-| 34 | 1. Create the backends module with CloudProvider ABC | ❌ Pending | — |
+| 34 | 1. Create the backends module with CloudProvider ABC | ✅ Done | no mapping |
 | 35 | 1.1 Create `mcp_server/backends/__init__.py` with CloudProvider abstract base class | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 36 | 1.2 Implement FixtureProvider in `mcp_server/backends/fixture_provider.py` | ✅ Done | fixtures/ exists |
-| 37 | 1.3 Write property tests for FixtureProvider | ⏳ Partial | no mapping |
+| 37 | 1.3 Write property tests for FixtureProvider | ✅ Done | no mapping |
 | 38 | 2. Implement stub providers | ❌ Pending | — |
 | 39 | 2.1 Implement AWSProvider in `mcp_server/backends/aws_provider.py` | ❌ Pending | — |
 | 40 | 2.2 Implement GCPProvider and AzureProvider in `mcp_server/backends/gcp_provider.py` and `mcp_server/backends/azure_provider.py` | ❌ Pending | — |
