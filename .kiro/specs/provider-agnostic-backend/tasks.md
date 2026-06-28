@@ -43,7 +43,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - Export CloudProvider, FixtureProvider, AWSProvider, GCPProvider, AzureProvider
     - _Requirements: 5.4_
 
-- [ ] 3. Wire provider selection into MCP server
+- [x] 3. Wire provider selection into MCP server
   - [x] 3.1 Add PROVIDER_REGISTRY and `_load_provider()` to `aws_janitor_mcp.py`
     - Define registry mapping backend names to provider classes
     - Implement `_load_provider()` reading `JANITOR_BACKEND` env var (default: `"fixture"`)
@@ -57,7 +57,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - **IMPORTANT: Do NOT remove imports that `validate_hcl` still needs** (`tempfile`, `os`, `subprocess`). After refactoring, verify with: `python -c "from mcp_server.aws_janitor_mcp import validate_hcl; print('ok')"`
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3_
 
-  - [ ] 3.3 Write property tests for provider selection
+  - [x] 3.3 Write property tests for provider selection
     - **Property 5: Provider registry completeness** — for any valid backend name, _load_provider() returns a CloudProvider instance
     - **Property 6: Invalid backend rejection** — for any string not in registry, _load_provider() raises ValueError with the invalid name and valid options
     - **Validates: Requirements 5.3, 5.4, 5.5**
