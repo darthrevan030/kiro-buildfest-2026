@@ -27,15 +27,16 @@ from orchestrator import ApprovalResult, AuditResult, Orchestrator
 @pytest.fixture
 def tmp_project(tmp_path):
     """Set up a temporary project structure with hooks and output dirs."""
-    (tmp_path / ".kiro" / "hooks").mkdir(parents=True)
-    (tmp_path / "output").mkdir()
-    (tmp_path / "rollbacks").mkdir()
+    (tmp_path / "hooks").mkdir(parents=True)
+    (tmp_path / "output" / "rollbacks").mkdir(parents=True)
+    (tmp_path / "output" / "logs").mkdir(parents=True)
+    (tmp_path / "output" / "policies").mkdir(parents=True)
 
-    pre_hook = tmp_path / ".kiro" / "hooks" / "pre-remediation.sh"
+    pre_hook = tmp_path / "hooks" / "pre-remediation.sh"
     pre_hook.write_text("#!/usr/bin/env bash\nexit 0\n")
     pre_hook.chmod(0o755)
 
-    post_hook = tmp_path / ".kiro" / "hooks" / "post-remediation.sh"
+    post_hook = tmp_path / "hooks" / "post-remediation.sh"
     post_hook.write_text("#!/usr/bin/env bash\nexit 0\n")
     post_hook.chmod(0o755)
 
@@ -90,7 +91,7 @@ def findings_store(tmp_project):
             "total_monthly_waste": 10.0,
         },
     }
-    path = tmp_project / "findings_store.json"
+    path = tmp_project / "output" / "findings_store.json"
     path.write_text(json.dumps(store, indent=2))
     return path
 
@@ -254,7 +255,7 @@ class TestTerraformValidateFails:
 
         # Write output files the hook needs
         (tmp_project / "output" / "remediation.tf").write_text('resource "null_resource" "test" {}')
-        (tmp_project / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
+        (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
 
         with patch("orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
@@ -278,7 +279,7 @@ class TestTerraformValidateFails:
         orch._architect.plan = MagicMock(return_value=[active_plan])
 
         (tmp_project / "output" / "remediation.tf").write_text('resource "null_resource" "test" {}')
-        (tmp_project / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
+        (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
 
         error_text = "Error: Invalid resource type\n\n  on remediation.tf line 5"
         with patch("orchestrator.subprocess.run") as mock_run:
@@ -304,7 +305,7 @@ class TestTerraformValidateFails:
         orch._architect.plan = MagicMock(return_value=[active_plan])
 
         (tmp_project / "output" / "remediation.tf").write_text('resource "null_resource" "test" {}')
-        (tmp_project / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
+        (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
 
         with patch("orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
@@ -345,7 +346,7 @@ class TestTerraformValidateFails:
         orch._architect.plan = MagicMock(return_value=[active_plan])
 
         (tmp_project / "output" / "remediation.tf").write_text('resource "null_resource" "test" {}')
-        (tmp_project / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
+        (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
 
         with patch("orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
@@ -373,7 +374,7 @@ class TestTerraformValidateFails:
         orch._architect.plan = MagicMock(return_value=[active_plan])
 
         (tmp_project / "output" / "remediation.tf").write_text('resource "null_resource" "test" {}')
-        (tmp_project / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
+        (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
 
         with patch("orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
@@ -490,7 +491,7 @@ class TestMalformedApproval:
         orch._architect.plan = MagicMock(return_value=[active_plan])
 
         (tmp_project / "output" / "remediation.tf").write_text('resource "null_resource" "test" {}')
-        (tmp_project / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
+        (tmp_project / "output" / "rollbacks" / "vol-err001.tf").write_text('resource "null_resource" "rollback" {}')
 
         with patch("orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(

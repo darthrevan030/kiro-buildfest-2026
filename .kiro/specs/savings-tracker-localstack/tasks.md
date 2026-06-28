@@ -7,7 +7,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
 ## Tasks
 
 - [x] 1. Implement Savings Tracker core module
-  - [x] 1.1 Create `savings.py` with SavingsTracker class
+  - [x] 1.1 Create `agents/savings_tracker.py` with SavingsTracker class
     - Implement `__init__`, `_load_ledger`, `_write_ledger`, `_compute_monthly_savings`, `_recalculate_total` methods
     - Implement `record_run(resources_remediated)` with duplicate detection via `run_id` matching
     - Implement `get_savings_summary()` returning `total_lifetime_monthly`, `total_lifetime_annual`, `total_runs`, `last_run_savings`
@@ -82,7 +82,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Change `["terraform", "validate"]` to `["tflocal", "validate"]`
     - _Requirements: 6.1_
 
-  - [x] 4.2 Replace `terraform` with `tflocal` in `.kiro/hooks/pre-remediation.sh`
+  - [x] 4.2 Replace `terraform` with `tflocal` in `hooks/pre-remediation.sh`
     - Replace all occurrences of `terraform -chdir=` with `tflocal -chdir=`
     - _Requirements: 6.1_
 
@@ -160,7 +160,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 8. Implement SPEC_COMPLIANCE.md generator
-  - [x] 8.1 Create `generate_spec_compliance.py` at project root
+  - [x] 8.1 Create `scripts/generate_spec_compliance.py`
     - Read and parse `.kiro/specs/tasks.md` for checkbox lines (`- [x]`, `- [ ]`, `- [-]`)
     - Implement keyword-to-file mapping table per requirements 8.3
     - Verify file existence for done tasks
@@ -169,7 +169,7 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
   - [x] 8.2 Create Git post-commit hook
-    - Create `.git/hooks/post-commit` that runs `python3 generate_spec_compliance.py && git add SPEC_COMPLIANCE.md`
+    - Create `.git/hooks/post-commit` that runs `python3 scripts/generate_spec_compliance.py && git add SPEC_COMPLIANCE.md`
     - Make the hook executable
     - _Requirements: 8.6_
 
@@ -292,8 +292,8 @@ This plan implements four sub-features for the Cloud Janitor project: a persiste
     - Run: `git check-ignore -v savings_ledger.json agent_reasoning.log`
     - Both files must be ignored
 
-  - [-] 10.5 Run generate_spec_compliance.py and commit output
-    - Run: `python3 generate_spec_compliance.py`
+  - [-] 10.5 Run scripts/generate_spec_compliance.py and commit output
+    - Run: `python3 scripts/generate_spec_compliance.py`
     - Verify SPEC_COMPLIANCE.md is generated without errors
     - Commit SPEC_COMPLIANCE.md
 

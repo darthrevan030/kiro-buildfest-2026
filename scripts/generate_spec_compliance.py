@@ -23,14 +23,14 @@ KEYWORD_MAPPING = [
     (["FinOps", "finops"], "agents/finops_auditor.py"),
     (["SecOps", "secops"], "agents/secops_guard.py"),
     (["Remediation", "remediation"], "agents/remediation_architect.py"),
-    (["rollback"], "rollbacks/"),
-    (["findings_store"], "findings_store.json"),
-    (["pre-remediation"], ".kiro/hooks/pre-remediation.sh"),
-    (["post-remediation"], ".kiro/hooks/post-remediation.sh"),
+    (["rollback"], "output/rollbacks/"),
+    (["findings_store"], "output/findings_store.json"),
+    (["pre-remediation"], "hooks/pre-remediation.sh"),
+    (["post-remediation"], "hooks/post-remediation.sh"),
     (["approval"], "__APPROVE_STRING_CHECK__"),
     (["audit log"], "__AUDIT_LOG_CHECK__"),
     (["Streamlit", "UI", "app.py"], "app.py"),
-    (["savings"], "savings.py"),
+    (["savings"], "agents/savings_tracker.py"),
 ]
 
 
@@ -210,7 +210,7 @@ def generate_report(tasks: list[dict], project_root: Path) -> str:
 
 
 def main():
-    project_root = Path(__file__).resolve().parent
+    project_root = Path(__file__).resolve().parent.parent
 
     # Find tasks.md
     tasks_md_files = find_tasks_md_files(project_root)

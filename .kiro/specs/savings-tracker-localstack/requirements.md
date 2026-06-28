@@ -6,15 +6,15 @@ This feature adds multiple capabilities to the Cloud Janitor project: (1) a pers
 
 ## Glossary
 
-- **Savings_Tracker**: The module (`savings.py`) responsible for reading findings_store.json, computing savings from approved remediations, persisting results to savings_ledger.json, and exposing summary data via `get_savings_summary()`.
+- **Savings_Tracker**: The module (`agents/savings_tracker.py`) responsible for reading findings_store.json, computing savings from approved remediations, persisting results to savings_ledger.json, and exposing summary data via `get_savings_summary()`.
 - **Savings_Ledger**: The persistent JSON file (`savings_ledger.json`) at project root that stores the lifetime history of remediated savings across all runs. This file is runtime-generated and excluded from version control via `.gitignore`.
 - **Findings_Store**: The existing `findings_store.json` file that contains scan results, findings, severity, and cost estimates produced by the FinOps Auditor and SecOps Guard agents.
 - **Run_Entry**: A single record within the savings ledger representing one completed remediation run.
 - **Terraform_Executor**: The subprocess layer within `mcp_server/aws_janitor_mcp.py` that invokes Terraform commands (init, validate, apply) for infrastructure remediation.
 - **LocalStack_Environment**: A Docker-based local AWS emulator used exclusively for demo execution of Terraform plans.
 - **Orchestrator**: The `orchestrator.py` module that sequences the agent pipeline and invokes post-remediation logic via `_run_post_remediation_hook()`.
-- **Compliance_Generator**: The script `generate_spec_compliance.py` at project root that reads task checkboxes from `.kiro/specs/tasks.md`, verifies corresponding file artifacts exist, and outputs `SPEC_COMPLIANCE.md`.
-- **Post_Commit_Hook**: A Git post-commit hook that automatically invokes `generate_spec_compliance.py` after every commit.
+- **Compliance_Generator**: The script `scripts/generate_spec_compliance.py` that reads task checkboxes from `.kiro/specs/tasks.md`, verifies corresponding file artifacts exist, and outputs `SPEC_COMPLIANCE.md`.
+- **Post_Commit_Hook**: A Git post-commit hook that automatically invokes `scripts/generate_spec_compliance.py` after every commit.
 - **Reasoning_Logger**: The logging subsystem within each agent that emits structured JSON event lines to `agent_reasoning.log` during audit execution.
 - **FinOps_Auditor**: The FinOps Auditor agent (`agents/finops_auditor.py`) that detects financial waste in cloud resources.
 - **SecOps_Guard**: The SecOps Guard agent (`agents/secops_guard.py`) that detects security vulnerabilities in cloud resources.
@@ -84,7 +84,7 @@ This feature adds multiple capabilities to the Cloud Janitor project: (1) a pers
 
 #### Acceptance Criteria
 
-1. THE Terraform_Executor SHALL invoke `tflocal` in place of `terraform` for ALL subprocess calls in the codebase — this includes `terraform init`, `terraform validate`, and `terraform apply`. Specifically: (a) `mcp_server/aws_janitor_mcp.py` `validate_hcl()` function, and (b) `.kiro/hooks/pre-remediation.sh` which currently calls `terraform -chdir=... init` and `terraform -chdir=... validate`. No subprocess call in the codebase shall invoke the bare `terraform` binary.
+1. THE Terraform_Executor SHALL invoke `tflocal` in place of `terraform` for ALL subprocess calls in the codebase — this includes `terraform init`, `terraform validate`, and `terraform apply`. Specifically: (a) `mcp_server/aws_janitor_mcp.py` `validate_hcl()` function, and (b) `hooks/pre-remediation.sh` which currently calls `terraform -chdir=... init` and `terraform -chdir=... validate`. No subprocess call in the codebase shall invoke the bare `terraform` binary.
 2. THE Terraform_Executor SHALL depend on the `terraform-local` Python package (added to requirements.txt)
 3. THE Docker_Compose_Configuration SHALL define a `localstack` service in `docker-compose.yml` that exposes port 4566 to the host and configures the `SERVICES` environment variable to include EC2, ElastiCache, S3, and EBS
 4. THE Terraform_Executor SHALL invoke `tflocal apply -auto-approve` (not just `tflocal plan`) against the LocalStack_Environment when the user approves a remediation through the orchestrator. THE Terraform_Executor SHALL NOT be invoked directly by the Makefile — the apply is triggered inside `orchestrator.py` via the approval flow.
@@ -108,7 +108,7 @@ This feature adds multiple capabilities to the Cloud Janitor project: (1) a pers
 
 #### Acceptance Criteria
 
-1. THE Compliance_Generator SHALL be implemented as `generate_spec_compliance.py` in the project root
+1. THE Compliance_Generator SHALL be implemented as `scripts/generate_spec_compliance.py`
 2. WHEN executed, THE Compliance_Generator SHALL read `.kiro/specs/tasks.md` and parse each task checkbox where `- [x]` indicates done, `- [ ]` indicates not done, and `- [-]` indicates partial
 3. WHEN a task is marked done, THE Compliance_Generator SHALL verify that at least one corresponding file exists in the repository using the following mapping:
    - Tasks mentioning "requirements" map to `.kiro/specs/requirements.md`
@@ -118,17 +118,17 @@ This feature adds multiple capabilities to the Cloud Janitor project: (1) a pers
    - Tasks mentioning "FinOps" or "finops" map to `agents/finops_auditor.py`
    - Tasks mentioning "SecOps" or "secops" map to `agents/secops_guard.py`
    - Tasks mentioning "Remediation" or "remediation" map to `agents/remediation_architect.py`
-   - Tasks mentioning "rollback" map to the `rollbacks/` directory
-   - Tasks mentioning "findings_store" map to `findings_store.json`
-   - Tasks mentioning "pre-remediation" map to `.kiro/hooks/pre-remediation.sh`
-   - Tasks mentioning "post-remediation" map to `.kiro/hooks/post-remediation.sh`
+   - Tasks mentioning "rollback" map to the `output/rollbacks/` directory
+   - Tasks mentioning "findings_store" map to `output/findings_store.json`
+   - Tasks mentioning "pre-remediation" map to `hooks/pre-remediation.sh`
+   - Tasks mentioning "post-remediation" map to `hooks/post-remediation.sh`
    - Tasks mentioning "approval" map to the presence of the string "APPROVE" in any file under `agents/` or in `orchestrator.py`
    - Tasks mentioning "audit log" map to `audit.log` or the presence of an audit log writer in the codebase
    - Tasks mentioning "Streamlit" or "UI" or "app.py" map to `app.py`
-   - Tasks mentioning "savings" map to `savings.py`
+   - Tasks mentioning "savings" map to `agents/savings_tracker.py`
 4. THE Compliance_Generator SHALL output a `SPEC_COMPLIANCE.md` file in the project root containing a table that marks each task as done, partial, or pending based on actual file existence
-5. WHEN `python3 generate_spec_compliance.py` is executed, THE Compliance_Generator SHALL complete without errors
-6. THE Post_Commit_Hook SHALL invoke `generate_spec_compliance.py` automatically after every commit AND run `git add SPEC_COMPLIANCE.md` so that the updated file is staged for inclusion. The hook command SHALL be: `python3 generate_spec_compliance.py && git add SPEC_COMPLIANCE.md`
+5. WHEN `python3 scripts/generate_spec_compliance.py` is executed, THE Compliance_Generator SHALL complete without errors
+6. THE Post_Commit_Hook SHALL invoke `scripts/generate_spec_compliance.py` automatically after every commit AND run `git add SPEC_COMPLIANCE.md` so that the updated file is staged for inclusion. The hook command SHALL be: `python3 scripts/generate_spec_compliance.py && git add SPEC_COMPLIANCE.md`
 
 ### Requirement 9: Streaming Agent Reasoning Logger
 

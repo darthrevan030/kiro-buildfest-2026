@@ -462,4 +462,4 @@ class TestLLMClientImport:
         from agents import query_interpreter
 
         source = inspect.getsource(query_interpreter)
-        assert "from llm_client import" in source
+        assert "from core.llm_client import" in source

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from filelock import FileLock, Timeout
 
-from llm_client import get_client, DEFAULT_MODEL
+from core.llm_client import get_client, DEFAULT_MODEL
 
 MAX_SNAPSHOTS: int = 30
 LOCK_TIMEOUT: int = 10

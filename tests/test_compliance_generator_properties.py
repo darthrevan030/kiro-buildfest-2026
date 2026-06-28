@@ -11,7 +11,7 @@ import pytest
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from generate_spec_compliance import parse_tasks, verify_artifact, generate_report, KEYWORD_MAPPING
+from scripts.generate_spec_compliance import parse_tasks, verify_artifact, generate_report, KEYWORD_MAPPING
 
 
 # --- Strategies ---

@@ -48,7 +48,7 @@ graph TD
 
     subgraph External["External Services"]
         OpenRouter[OpenRouter API - OpenAI-compatible]
-        LLMClient[llm_client.py - shared LLM wrapper]
+        LLMClient[core/llm_client.py - shared LLM wrapper]
         MCP[MCP Server - aws_janitor_mcp.py]
     end
 
@@ -108,7 +108,7 @@ sequenceDiagram
     participant SecOps as SecOpsGuard
     participant AD as AnomalyDetector
     participant DD as DriftDetector
-    participant LLM as OpenRouter API (via llm_client.py)
+    participant LLM as OpenRouter API (via core/llm_client.py)
 
     User->>App: "Show me idle Redis clusters over $50/mo"
     App->>QI: interpret("Show me idle Redis clusters over $50/mo")
@@ -1811,7 +1811,7 @@ Properties to test:
 
 ### LLM Call Latency
 
-- All LLM calls route through llm_client.py to OpenRouter using `JANITOR_LLM_MODEL` (default: `anthropic/claude-haiku-4-5`)
+- All LLM calls route through core/llm_client.py to OpenRouter using `JANITOR_LLM_MODEL` (default: `anthropic/claude-haiku-4-5`)
 - Model can be swapped to cheaper alternatives (e.g. `mistralai/mistral-7b-instruct`) via env var for testing
 - Session state caching in `app.py` prevents redundant LLM calls on Streamlit rerenders
 - Cache keyed by: (agent_name, input_hash) → result
@@ -1890,7 +1890,7 @@ Properties to test:
 | Package | Version | Purpose |
 |---------|---------|---------|
 | openai | >=1.0.0 | OpenAI-compatible SDK for OpenRouter API calls |
-| (llm_client.py) | project file | Shared wrapper — single import point for all LLM calls |
+| (core/llm_client.py) | project file | Shared wrapper — single import point for all LLM calls |
 | filelock | >=3.13.0 | Cross-platform file locking for scan_history.json |
 | APScheduler | >=3.10.0 | Cron-based scheduling for automated scans |
 
@@ -1916,7 +1916,7 @@ Properties to test:
 ```mermaid
 graph LR
     subgraph Shared
-        LLC[llm_client.py]
+        LLC[core/llm_client.py]
     end
 
     subgraph New Agents

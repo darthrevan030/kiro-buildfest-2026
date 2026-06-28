@@ -31,13 +31,16 @@ class ReasoningLogger:
 
     Args:
         log_path: Path to the reasoning log file.
-            Defaults to ``agent_reasoning.log`` in the current working directory.
+            Defaults to ``output/logs/agent_reasoning.log`` relative to the project root.
     """
 
     VALID_EVENT_TYPES = {"check", "finding", "skip", "decision", "handoff"}
 
     def __init__(self, log_path: Path | None = None) -> None:
-        self._log_path = log_path if log_path is not None else Path("agent_reasoning.log")
+        if log_path is not None:
+            self._log_path = log_path
+        else:
+            self._log_path = Path(__file__).resolve().parent.parent / "output" / "logs" / "agent_reasoning.log"
 
     @property
     def log_path(self) -> Path:

@@ -4,10 +4,10 @@
 
 This design covers four sub-features added to the Cloud Janitor project:
 
-1. **Savings Tracker** (`savings.py`) — a persistent cumulative savings ledger that records cost savings across multiple audit-and-remediation runs, exposes a summary API, and integrates with the orchestrator's `approve()` method.
+1. **Savings Tracker** (`agents/savings_tracker.py`) — a persistent cumulative savings ledger that records cost savings across multiple audit-and-remediation runs, exposes a summary API, and integrates with the orchestrator's `approve()` method.
 2. **LocalStack Wiring** — replaces all `terraform` subprocess calls with `tflocal` (from `terraform-local`) and introduces a `docker-compose.yml` with a LocalStack service for demo-mode execution.
-3. **SPEC_COMPLIANCE.md Generator** (`generate_spec_compliance.py`) — reads `.kiro/specs/tasks.md`, verifies file artifacts exist, and outputs a compliance report. A Git post-commit hook auto-runs it.
-4. **Streaming Agent Reasoning Logger** — each agent emits structured JSON events to `agent_reasoning.log`, rendered in a Streamlit panel with live polling.
+3. **SPEC_COMPLIANCE.md Generator** (`scripts/generate_spec_compliance.py`) — reads `.kiro/specs/tasks.md`, verifies file artifacts exist, and outputs a compliance report. A Git post-commit hook auto-runs it.
+4. **Streaming Agent Reasoning Logger** — each agent emits structured JSON events to `output/logs/agent_reasoning.log`, rendered in a Streamlit panel with live polling.
 
 ### Design Rationale
 
@@ -24,7 +24,7 @@ graph TD
         A[approve] -->|on success| B[SavingsTracker.record_run]
     end
 
-    subgraph SavingsTracker["savings.py"]
+    subgraph SavingsTracker["agents/savings_tracker.py"]
         B --> C{run_id exists?}
         C -->|yes| D[Skip, return early]
         C -->|no| E[Compute savings from findings_store]
@@ -53,9 +53,9 @@ graph TD
 
 ## Components and Interfaces
 
-### 1. SavingsTracker (`savings.py`)
+### 1. SavingsTracker (`agents/savings_tracker.py`)
 
-**Location**: Project root (`savings.py`)
+**Location**: `agents/savings_tracker.py`
 
 ```python
 class SavingsTracker:
@@ -124,7 +124,7 @@ class SavingsTracker:
 
 ```python
 # In Orchestrator.__init__:
-from savings import SavingsTracker
+from agents.savings_tracker import SavingsTracker
 self._savings_tracker = SavingsTracker(...)
 
 # In Orchestrator.approve(), AFTER successful approval and execution:
@@ -179,7 +179,7 @@ Each agent receives a `ReasoningLogger` instance and calls `emit()` at key decis
 #   ["tflocal", "validate"]
 ```
 
-**Changes to `.kiro/hooks/pre-remediation.sh`**:
+**Changes to `hooks/pre-remediation.sh`**:
 
 ```bash
 # Replace all occurrences of:
@@ -233,7 +233,7 @@ demo:
  streamlit run app.py
 ```
 
-### 6. Compliance Generator (`generate_spec_compliance.py`)
+### 6. Compliance Generator (`scripts/generate_spec_compliance.py`)
 
 A standalone Python script that:
 
@@ -488,5 +488,5 @@ Each correctness property (1–11) maps to a single Hypothesis test function:
 - `requirements.txt` contains `terraform-local`
 - `docker-compose.yml` defines `localstack` service on port 4566
 - `Makefile` contains `demo:` target
-- `generate_spec_compliance.py` exists and runs without error
-- No bare `terraform` calls remain in `mcp_server/aws_janitor_mcp.py` or `.kiro/hooks/pre-remediation.sh`
+- `scripts/generate_spec_compliance.py` exists and runs without error
+- No bare `terraform` calls remain in `mcp_server/aws_janitor_mcp.py` or `hooks/pre-remediation.sh`

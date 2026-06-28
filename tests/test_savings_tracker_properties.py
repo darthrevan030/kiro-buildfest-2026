@@ -12,7 +12,7 @@ import pytest
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
 
-from savings import SavingsTracker
+from agents.savings_tracker import SavingsTracker
 
 
 # --- Strategies ---

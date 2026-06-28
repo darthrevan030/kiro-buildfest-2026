@@ -192,7 +192,7 @@ Shared state that passes data between agents.
 
 ## AI Features
 
-All AI features route through OpenRouter via `llm_client.py`. Set `OPENROUTER_API_KEY` in your `.env` to enable them. Each agent fails gracefully to a safe default — the pipeline never crashes because of an LLM failure.
+All AI features route through OpenRouter via `core/llm_client.py`. Set `OPENROUTER_API_KEY` in your `.env` to enable them. Each agent fails gracefully to a safe default — the pipeline never crashes because of an LLM failure.
 
 ### Natural Language Query Interface
 
@@ -492,20 +492,27 @@ cloud-janitor/
 │       ├── aws_provider.py          # AWS backend (stub)
 │       ├── gcp_provider.py          # GCP backend (stub)
 │       └── azure_provider.py        # Azure backend (stub)
+├── core/
+│   └── llm_client.py               # Shared LLM client (OpenRouter)
 ├── fixtures/
 │   ├── aws_cost_explorer.json       # Fake cost/idle resource data
 │   └── aws_config_inspector.json    # Fake security findings + dependency map
+├── hooks/
+│   ├── pre-remediation.sh           # HCL validation gate (runtime)
+│   └── post-remediation.sh          # Audit log append (runtime)
 ├── output/
+│   ├── logs/                        # audit.log, scheduler.log, agent_reasoning.log
+│   ├── policies/                    # Incident-generated policy JSON files
+│   ├── rollbacks/                   # Per-resource rollback HCL
 │   └── remediation.tf               # Auto-generated (overwritten each scan)
-├── rollbacks/
-│   └── <resource_id>.tf             # Per-resource rollback HCL
+├── scripts/
+│   ├── git-hooks/post-commit        # Git hook: auto-regen SPEC_COMPLIANCE.md
+│   ├── generate_spec_compliance.py  # Dev tool: spec compliance report
+│   └── setup-hooks.sh               # Install git hooks
 ├── tests/                           # pytest + hypothesis property tests
-├── policies/                        # Incident-generated policy JSON files
 ├── app.py                           # Streamlit dashboard
 ├── orchestrator.py                  # Agent pipeline + approval flow
 ├── scheduler.py                     # Cron-based background scans
-├── llm_client.py                    # Shared LLM client (OpenRouter)
-├── savings.py                       # Savings tracker (ledger)
 ├── .env.example                     # Environment variable template
 ├── docker-compose.yml               # LocalStack container definition
 ├── Makefile                         # make demo entry point

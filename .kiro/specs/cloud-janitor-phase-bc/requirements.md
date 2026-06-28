@@ -25,7 +25,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 - **Safe_Default**: A valid fallback value returned when an AI agent encounters an error (empty lists, zero counts, "unknown" strings)
 - **MCP_Tool**: A function decorated with @mcp.tool() exposed through the MCP server interface
 - **Fixture_Mode**: Development mode (JANITOR_BACKEND=fixture) where all features work without live AWS credentials
-- **LLM_Client**: The shared `llm_client.py` module at project root that wraps the OpenRouter API; all AI agents import from it instead of using the OpenAI SDK directly
+- **LLM_Client**: The shared `core/llm_client.py` module that wraps the OpenRouter API; all AI agents import from it instead of using the OpenAI SDK directly
 - **OpenRouter**: The LLM API gateway used for all AI calls; exposes an OpenAI-compatible endpoint at `https://openrouter.ai/api/v1`
 
 ## Requirements
@@ -46,7 +46,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 8. THE system SHALL ensure that no AI agent raises an unhandled exception to callers regardless of input content or external service state; each agent SHALL catch all exceptions and return its defined safe default within 30 seconds of invocation
 9. IF any AI agent returns a safe default due to an error (including transient errors), THEN THE system SHALL always log the failure event including the agent name and error type to stderr so that operators can detect degraded operation; logging SHALL NOT be skipped regardless of error duration or type
 10. IF an AI agent returns a safe default due to an error, THEN THE Orchestrator SHALL continue executing subsequent pipeline steps using the safe default values without halting or requiring manual intervention
-11. THE system SHALL route all LLM calls through `llm_client.py` at project root; no AI agent SHALL import `openai` or any LLM SDK directly
+11. THE system SHALL route all LLM calls through `core/llm_client.py`; no AI agent SHALL import `openai` or any LLM SDK directly
 
 ### Requirement 2: Natural Language Query Interpretation
 
@@ -194,7 +194,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 7. THE system SHALL use direct import (no network transport) for all MCP tool implementations regardless of error conditions or backend mode
 8. IF a required parameter is missing or of incorrect type, THEN THE MCP tool SHALL catch all parameter validation errors (including those from underlying libraries) and return an error response indicating the invalid parameter without crashing the server
 9. IF any MCP tool invocation triggers an internal agent failure, THEN THE tool SHALL return the agent's safe default response rather than raising an unhandled exception
-10. THE system SHALL provide a `llm_client.py` module at project root exposing `get_client() -> openai.OpenAI` and `DEFAULT_MODEL: str`; all AI agents SHALL use `get_client()` for LLM calls and `DEFAULT_MODEL` as the model string
+10. THE system SHALL provide a `core/llm_client.py` module exposing `get_client() -> openai.OpenAI` and `DEFAULT_MODEL: str`; all AI agents SHALL use `get_client()` for LLM calls and `DEFAULT_MODEL` as the model string
 
 ### Requirement 12: Fixture Mode Compatibility
 
@@ -214,7 +214,7 @@ This document specifies the requirements for Phase B (Tier 2 AI Features) and Ph
 
 #### Acceptance Criteria
 
-1. THE system SHALL provide `llm_client.py` at the project root exposing `get_client() -> openai.OpenAI` and `DEFAULT_MODEL: str`
+1. THE system SHALL provide `core/llm_client.py` exposing `get_client() -> openai.OpenAI` and `DEFAULT_MODEL: str`
 2. `get_client()` SHALL return an `openai.OpenAI` instance configured with `base_url="https://openrouter.ai/api/v1"` and `api_key` read from the `OPENROUTER_API_KEY` environment variable
 3. `DEFAULT_MODEL` SHALL be set to the value of the `JANITOR_LLM_MODEL` environment variable, defaulting to `"anthropic/claude-haiku-4-5"` if the variable is unset
 4. IF `OPENROUTER_API_KEY` is not set, THEN `get_client()` SHALL raise `EnvironmentError` with a message indicating the missing variable; AI agents SHALL catch this and return their safe defaults

@@ -2,12 +2,12 @@
 
 ## Overview
 
-This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase C (Tier 3 Platform Features). The implementation follows a layered approach: shared infrastructure first (llm_client.py), then individual AI agents, then platform agents, then orchestrator integration and MCP tool wiring. Each agent is implemented with its safe-default error handling pattern and tested independently before integration.
+This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase C (Tier 3 Platform Features). The implementation follows a layered approach: shared infrastructure first (`core/llm_client.py`), then individual AI agents, then platform agents, then orchestrator integration and MCP tool wiring. Each agent is implemented with its safe-default error handling pattern and tested independently before integration.
 
 ## Tasks
 
 - [ ] 1. Set up shared LLM infrastructure and project dependencies
-  - [x] 1.1 Create `llm_client.py` at project root
+  - [x] 1.1 Create `core/llm_client.py`
     - Implement `get_client() -> openai.OpenAI` configured with `base_url="https://openrouter.ai/api/v1"` and `api_key` from `OPENROUTER_API_KEY` env var
     - Implement `DEFAULT_MODEL: str` reading from `JANITOR_LLM_MODEL` env var, defaulting to `"anthropic/claude-haiku-4-5"`
     - Raise `EnvironmentError("OPENROUTER_API_KEY is not set")` if env var missing
@@ -24,7 +24,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Add entries for `findings_store.json`, `scan_history.json`, `savings_ledger.json`, `scheduler.log`, `policies/*.json`
     - _Requirements: 14.3_
 
-  - [x] 1.4 Write unit tests for `llm_client.py`
+  - [x] 1.4 Write unit tests for `core/llm_client.py`
     - Test `get_client()` returns OpenAI instance with correct base_url
     - Test `DEFAULT_MODEL` reads from env var with correct default
     - Test `EnvironmentError` raised when `OPENROUTER_API_KEY` unset
@@ -39,7 +39,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Clamp min_idle_days >= 0, confidence in [0.0, 1.0]
     - Return safe defaults on empty/whitespace query without calling LLM
     - Return safe defaults on any exception (LLM failure, invalid JSON)
-    - Import LLM via `from llm_client import get_client, DEFAULT_MODEL`
+    - Import LLM via `from core.llm_client import get_client, DEFAULT_MODEL`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 1.1, 1.8, 1.9, 1.11_
 
   - [x] 2.2 Write property test for QueryInterpreter output validity

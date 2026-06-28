@@ -1,4 +1,4 @@
 #!/bin/sh
-cp scripts/hooks/post-commit .git/hooks/post-commit
+cp scripts/git-hooks/post-commit .git/hooks/post-commit
 chmod +x .git/hooks/post-commit
 echo "Git hooks installed successfully."

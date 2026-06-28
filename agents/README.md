@@ -24,7 +24,7 @@ Cloud Janitor's agent pipeline detects waste and security issues, generates Terr
 
 **Data source:** Calls `get_cost_data()` MCP tool with `min_idle_days=0` to retrieve all resources, then applies the 30-day threshold internally.
 
-**Output:** Writes `findings_store.json` fresh (overwrites any existing file). The store contains a `scan_id`, timestamps, the findings array, and a summary with counts by severity, by agent, and total monthly waste.
+**Output:** Writes `output/findings_store.json` fresh (overwrites any existing file). The store contains a `scan_id`, timestamps, the findings array, and a summary with counts by severity, by agent, and total monthly waste.
 
 ---
 
@@ -50,7 +50,7 @@ Cloud Janitor's agent pipeline detects waste and security issues, generates Terr
 
 **Data source:** Calls `get_security_data()` MCP tool with `check_type="security_group"` and `check_type="encryption"`.
 
-**Output:** Appends findings to `findings_store.json` (does not overwrite FinOps findings). Recalculates the summary section to cover all findings from both agents.
+**Output:** Appends findings to `output/findings_store.json` (does not overwrite FinOps findings). Recalculates the summary section to cover all findings from both agents.
 
 ---
 
@@ -58,11 +58,11 @@ Cloud Janitor's agent pipeline detects waste and security issues, generates Terr
 
 **Purpose:** Generates Terraform HCL for remediating findings and corresponding rollback HCL.
 
-**Inputs:** Reads `findings_store.json` (must contain entries from both FinOps and SecOps agents).
+**Inputs:** Reads `output/findings_store.json` (must contain entries from both FinOps and SecOps agents).
 
 **Workflow:**
 
-1. Load all findings from `findings_store.json`
+1. Load all findings from `output/findings_store.json`
 2. For each finding, call `check_dependencies()` MCP tool
 3. If dependencies found → block remediation, produce warning (manual review required)
 4. If no dependencies → generate remediation HCL AND rollback HCL side by side
@@ -71,7 +71,7 @@ Cloud Janitor's agent pipeline detects waste and security issues, generates Terr
 **Output files:**
 
 - `output/remediation.tf` — combined remediation HCL for all unblocked findings (overwritten each run)
-- `rollbacks/<resource_id>.tf` — one rollback file per resource
+- `output/rollbacks/<resource_id>.tf` — one rollback file per resource
 
 **HCL generation rules:**
 
@@ -194,20 +194,20 @@ FinOpsAuditor → SecOpsGuard → RemediationArchitect
 
 **Why order is enforced:**
 
-1. **FinOpsAuditor runs first** — writes `findings_store.json` fresh (overwrites). This establishes the baseline store with cost/waste findings.
+1. **FinOpsAuditor runs first** — writes `output/findings_store.json` fresh (overwrites). This establishes the baseline store with cost/waste findings.
 
-2. **SecOpsGuard runs second** — reads the existing `findings_store.json` and appends security findings. It recalculates the summary to include both agent's contributions.
+2. **SecOpsGuard runs second** — reads the existing `output/findings_store.json` and appends security findings. It recalculates the summary to include both agent's contributions.
 
-3. **RemediationArchitect runs last** — reads the complete `findings_store.json` containing entries from both prior agents. It needs the full picture to:
+3. **RemediationArchitect runs last** — reads the complete `output/findings_store.json` containing entries from both prior agents. It needs the full picture to:
    - Check dependencies across all flagged resources
    - Generate remediation that accounts for both cost and security findings on the same resource
    - Avoid generating conflicting remediations
 
-**No agent may skip its predecessor.** RemediationArchitect must not run until `findings_store.json` contains entries from both prior agents.
+**No agent may skip its predecessor.** RemediationArchitect must not run until `output/findings_store.json` contains entries from both prior agents.
 
 ---
 
-## findings_store.json Schema
+## output/findings_store.json Schema
 
 The shared state file that passes data between agents.
 

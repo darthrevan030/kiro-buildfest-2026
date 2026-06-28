@@ -11,7 +11,7 @@ This directory contains auto-generated Terraform remediation code.
 
 ### Lifecycle
 
-1. RemediationArchitect reads `findings_store.json` and runs dependency checks
+1. RemediationArchitect reads `output/findings_store.json` and runs dependency checks
 2. For each actionable finding, it generates remediation HCL
 3. All remediations are written to `output/remediation.tf`, replacing any previous content
 4. The Approval Gate displays the HCL diff and waits for `APPROVE <resource-id>`

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 import subprocess
 import sys
 import uuid
@@ -26,6 +27,20 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+
+def _to_bash_path(p: Path) -> str:
+    """Convert a Path to a bash-compatible string.
+
+    On Windows, converts 'D:/foo/bar' to '/d/foo/bar' so Git Bash can resolve it.
+    On other platforms, returns the POSIX string unchanged.
+    """
+    posix = p.as_posix()
+    if platform.system() == "Windows" and len(posix) >= 2 and posix[1] == ":":
+        # D:/foo/bar → /d/foo/bar
+        drive_letter = posix[0].lower()
+        return f"/{drive_letter}{posix[2:]}"
+    return posix
 
 from agents.approval_gate import (
     ApprovalGate,
@@ -42,14 +57,14 @@ from agents.reasoning_logger import ReasoningLogger
 from agents.remediation_architect import RemediationArchitect, RemediationPlan
 from agents.secops_guard import SecOpsGuard
 from mcp_server.aws_janitor_mcp import get_cost_data, get_security_data
-from savings import SavingsTracker
+from agents.savings_tracker import SavingsTracker
 
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
 PROJECT_ROOT = Path(__file__).parent
 FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
-HOOKS_DIR = PROJECT_ROOT / "scripts" / "hooks"
+HOOKS_DIR = PROJECT_ROOT / "hooks"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 ROLLBACKS_DIR = PROJECT_ROOT / "output" / "rollbacks"
 AUDIT_LOG_PATH = PROJECT_ROOT / "output" / "logs" / "audit.log"
@@ -138,7 +153,7 @@ class Orchestrator:
         (self.project_root / "output" / "logs").mkdir(parents=True, exist_ok=True)
         (self.project_root / "output" / "rollbacks").mkdir(parents=True, exist_ok=True)
         (self.project_root / "output" / "policies").mkdir(parents=True, exist_ok=True)
-        self.hooks_dir = self.project_root / "scripts" / "hooks"
+        self.hooks_dir = self.project_root / "hooks"
         self.output_dir = self.project_root / "output"
         self.rollbacks_dir = self.project_root / "output" / "rollbacks"
         self.audit_log_path = self.project_root / "output" / "logs" / "audit.log"
@@ -583,11 +598,16 @@ class Orchestrator:
 
         try:
             result = subprocess.run(
-                ["bash", hook_path.as_posix(), remediation_path.as_posix(), rollback_path.as_posix()],
+                [
+                    "bash",
+                    _to_bash_path(hook_path),
+                    _to_bash_path(remediation_path),
+                    _to_bash_path(rollback_path),
+                ],
                 capture_output=True,
                 text=True,
                 timeout=60,
-                cwd=self.project_root.as_posix(),
+                cwd=str(self.project_root),
             )
 
             if result.returncode != 0:
@@ -622,7 +642,7 @@ class Orchestrator:
             subprocess.run(
                 [
                     "bash",
-                    hook_path.as_posix(),
+                    _to_bash_path(hook_path),
                     resource_id,
                     action,
                     result,
@@ -631,7 +651,7 @@ class Orchestrator:
                 capture_output=True,
                 text=True,
                 timeout=30,
-                cwd=self.project_root.as_posix(),
+                cwd=str(self.project_root),
             )
         except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
             # Post-remediation hook is non-blocking — log but don't fail

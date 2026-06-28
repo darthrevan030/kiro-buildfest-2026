@@ -8,7 +8,7 @@ import copy
 import json
 import sys
 
-from llm_client import get_client, DEFAULT_MODEL
+from core.llm_client import get_client, DEFAULT_MODEL
 
 VALID_RESOURCE_TYPES: set[str] = {"elasticache", "ebs", "ec2"}
 VALID_CHECK_TYPES: set[str] = {"security_group", "encryption", "public_access"}

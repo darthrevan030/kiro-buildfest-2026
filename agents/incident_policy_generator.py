@@ -12,7 +12,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from llm_client import get_client, DEFAULT_MODEL
+from core.llm_client import get_client, DEFAULT_MODEL
 
 VALID_CHECK_TYPES: set[str] = {"security_group", "encryption", "public_access", "idle_resource"}
 VALID_RESOURCE_TYPES: set[str] = {"elasticache", "ebs", "ec2"}

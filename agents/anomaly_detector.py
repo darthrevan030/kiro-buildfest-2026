@@ -8,7 +8,7 @@ agents would miss.
 import json
 import sys
 
-from llm_client import get_client, DEFAULT_MODEL
+from core.llm_client import get_client, DEFAULT_MODEL
 
 VALID_SEVERITIES: set[str] = {"high", "medium", "low"}
 

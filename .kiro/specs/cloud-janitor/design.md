@@ -43,7 +43,7 @@ MCP Layer (mcp_server/aws_janitor_mcp.py)
   └── validate_hcl(hcl_string)
         → shells out to: terraform validate
 
-Hooks (.kiro/hooks/)
+Hooks (hooks/)
   ├── pre-remediation.sh
   │     trigger: before Remediation Architect writes output
   │     action: terraform validate on generated HCL

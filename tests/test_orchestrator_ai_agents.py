@@ -23,15 +23,16 @@ from orchestrator import AuditResult, Orchestrator
 def tmp_orchestrator(tmp_path: Path) -> Orchestrator:
     """Create an Orchestrator with a temp project root, mocking out agent I/O."""
     # Create required directories and files
-    hooks_dir = tmp_path / ".kiro" / "hooks"
+    hooks_dir = tmp_path / "hooks"
     hooks_dir.mkdir(parents=True)
     output_dir = tmp_path / "output"
     output_dir.mkdir()
-    rollbacks_dir = tmp_path / "rollbacks"
-    rollbacks_dir.mkdir()
+    (tmp_path / "output" / "rollbacks").mkdir()
+    (tmp_path / "output" / "logs").mkdir()
+    (tmp_path / "output" / "policies").mkdir()
 
     # Create a minimal findings_store.json so validation passes
-    findings_store = tmp_path / "findings_store.json"
+    findings_store = tmp_path / "output" / "findings_store.json"
     findings_store.write_text(
         '{"findings": [{"agent":"finops","resource_id":"vol-1"},{"agent":"secops","resource_id":"sg-1"}]}'
     )

@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T17:59:31Z
+Generated: 2026-06-28T18:39:34Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -18,7 +18,7 @@ Generated: 2026-06-28T17:59:31Z
 | 12 | 2. SecOps Guard — calls MCP, appends to findings_store.json | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 13 | 3. Remediation Architect — reads findings, dependency check, generates HCL | ✅ Done | agents/remediation_architect.py exists |
 | 14 | 4. Rollback HCL generation (alongside remediation, not after) | ✅ Done | agents/remediation_architect.py exists |
-| 15 | 5. findings_store.json schema validation | ✅ Done | findings_store.json missing |
+| 15 | 5. findings_store.json schema validation | ✅ Done | output/findings_store.json exists |
 | 16 | 1. pre-remediation.sh — terraform validate gate | ✅ Done | agents/remediation_architect.py exists |
 | 17 | 2. post-remediation.sh — audit.log append | ✅ Done | agents/remediation_architect.py exists |
 | 18 | 3. Wire hooks into orchestrator call sequence | ✅ Done | no mapping |
@@ -38,10 +38,10 @@ Generated: 2026-06-28T17:59:31Z
 | 32 | 5. Record demo video for Devpost submission | ❌ Pending | — |
 | 33 | 6. Write Devpost submission copy | ❌ Pending | — |
 | 34 | 1. Set up shared LLM infrastructure and project dependencies | ❌ Pending | — |
-| 35 | 1.1 Create `llm_client.py` at project root | ✅ Done | no mapping |
+| 35 | 1.1 Create `core/llm_client.py` | ✅ Done | no mapping |
 | 36 | 1.2 Update `requirements.txt` with new dependencies | ✅ Done | .kiro/specs/cloud-janitor/requirements.md exists |
 | 37 | 1.3 Update `.gitignore` with sensitive data files | ✅ Done | no mapping |
-| 38 | 1.4 Write unit tests for `llm_client.py` | ✅ Done | no mapping |
+| 38 | 1.4 Write unit tests for `core/llm_client.py` | ✅ Done | no mapping |
 | 39 | 2. Implement Phase B AI agents (QueryInterpreter, RemediationExplainer, PolicySuggester) | ✅ Done | agents/remediation_architect.py exists |
 | 40 | 2.1 Implement `agents/query_interpreter.py` | ✅ Done | no mapping |
 | 41 | 2.2 Write property test for QueryInterpreter output validity | ✅ Done | no mapping |
@@ -105,12 +105,12 @@ Generated: 2026-06-28T17:59:31Z
 | 99 | 6.4 Create `agents/README.md` | ✅ Done | no mapping |
 | 100 | 6.5 Create `fixtures/README.md` | ✅ Done | fixtures/ exists |
 | 101 | 6.6 Create `tests/README.md` | ✅ Done | no mapping |
-| 102 | 6.7 Create `output/README.md` and `rollbacks/README.md` | ✅ Done | rollbacks/ missing |
+| 102 | 6.7 Create `output/README.md` and `rollbacks/README.md` | ✅ Done | output/rollbacks/ exists |
 | 103 | 7. Final checkpoint - Ensure all tests pass | ✅ Done | no mapping |
 | 104 | 1. Implement Savings Tracker core module | ✅ Done | no mapping |
-| 105 | 1.1 Create `savings.py` with SavingsTracker class | ✅ Done | savings.py exists |
+| 105 | 1.1 Create `agents/savings_tracker.py` with SavingsTracker class | ✅ Done | agents/savings_tracker.py exists |
 | 106 | 1.2 Write property test: RunEntry schema and field correctness | ✅ Done | no mapping |
-| 107 | 1.3 Write property test: Monthly savings computation | ✅ Done | savings.py exists |
+| 107 | 1.3 Write property test: Monthly savings computation | ✅ Done | agents/savings_tracker.py exists |
 | 108 | 1.4 Write property test: Recalculate-from-source invariant | ✅ Done | no mapping |
 | 109 | 1.5 Write property test: Duplicate run idempotency | ✅ Done | no mapping |
 | 110 | 1.6 Write property test: Savings summary correctness | ✅ Done | no mapping |
@@ -124,7 +124,7 @@ Generated: 2026-06-28T17:59:31Z
 | 118 | 3. Checkpoint | ✅ Done | no mapping |
 | 119 | 4. LocalStack wiring and demo infrastructure | ✅ Done | no mapping |
 | 120 | 4.1 Replace `terraform` with `tflocal` in `mcp_server/aws_janitor_mcp.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
-| 121 | 4.2 Replace `terraform` with `tflocal` in `.kiro/hooks/pre-remediation.sh` | ✅ Done | agents/remediation_architect.py exists |
+| 121 | 4.2 Replace `terraform` with `tflocal` in `hooks/pre-remediation.sh` | ✅ Done | agents/remediation_architect.py exists |
 | 122 | 4.3 Create `docker-compose.yml` at project root | ✅ Done | no mapping |
 | 123 | 4.4 Create `Makefile` at project root with `demo` target | ✅ Done | no mapping |
 | 124 | 4.5 Wire `tflocal apply -auto-approve` into orchestrator approval flow | ✅ Done | "APPROVE" found in codebase |
@@ -137,7 +137,7 @@ Generated: 2026-06-28T17:59:31Z
 | 131 | 6.1 Add runtime files to `.gitignore` | ✅ Done | no mapping |
 | 132 | 7. Checkpoint | ✅ Done | no mapping |
 | 133 | 8. Implement SPEC_COMPLIANCE.md generator | ✅ Done | no mapping |
-| 134 | 8.1 Create `generate_spec_compliance.py` at project root | ✅ Done | no mapping |
+| 134 | 8.1 Create `scripts/generate_spec_compliance.py` | ✅ Done | no mapping |
 | 135 | 8.2 Create Git post-commit hook | ✅ Done | no mapping |
 | 136 | 8.3 Write property test: Compliance generator parsing and mapping | ✅ Done | no mapping |
 | 137 | 8.4 Write property test: Compliance generator output format | ✅ Done | no mapping |
@@ -150,4 +150,4 @@ Generated: 2026-06-28T17:59:31Z
 | 144 | 10.2 Run test quality audit on all test files | ✅ Done | no mapping |
 | 145 | 10.3 Verify no hardcoded `terraform` or `tflocal` binary calls remain | ✅ Done | no mapping |
 | 146 | 10.4 Verify runtime files excluded from git | ✅ Done | no mapping |
-| 147 | 10.5 Run generate_spec_compliance.py and commit output | ⏳ Partial | no mapping |
+| 147 | 10.5 Run scripts/generate_spec_compliance.py and commit output | ⏳ Partial | no mapping |

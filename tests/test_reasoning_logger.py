@@ -16,7 +16,8 @@ class TestReasoningLoggerInit:
 
     def test_default_log_path(self):
         logger = ReasoningLogger()
-        assert logger.log_path == Path("agent_reasoning.log")
+        expected = Path(__file__).resolve().parent.parent / "output" / "logs" / "agent_reasoning.log"
+        assert logger.log_path == expected
 
     def test_custom_log_path(self, tmp_path: Path):
         custom = tmp_path / "custom.log"

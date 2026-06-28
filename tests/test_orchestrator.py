@@ -29,16 +29,17 @@ from orchestrator import (
 def tmp_project(tmp_path):
     """Set up a temporary project structure for testing."""
     # Create directories
-    (tmp_path / "scripts" / "hooks").mkdir(parents=True)
-    (tmp_path / "output").mkdir()
-    (tmp_path / "rollbacks").mkdir()
+    (tmp_path / "hooks").mkdir(parents=True)
+    (tmp_path / "output" / "rollbacks").mkdir(parents=True)
+    (tmp_path / "output" / "logs").mkdir(parents=True)
+    (tmp_path / "output" / "policies").mkdir(parents=True)
 
     # Create hook scripts (simple pass/fail scripts for testing)
-    pre_hook = tmp_path / "scripts" / "hooks" / "pre-remediation.sh"
+    pre_hook = tmp_path / "hooks" / "pre-remediation.sh"
     pre_hook.write_text("#!/usr/bin/env bash\nexit 0\n")
     pre_hook.chmod(0o755)
 
-    post_hook = tmp_path / "scripts" / "hooks" / "post-remediation.sh"
+    post_hook = tmp_path / "hooks" / "post-remediation.sh"
     post_hook.write_text("#!/usr/bin/env bash\nexit 0\n")
     post_hook.chmod(0o755)
 
@@ -93,7 +94,7 @@ def findings_store_both_agents(tmp_project):
             "total_monthly_waste": 12.50,
         },
     }
-    store_path = tmp_project / "findings_store.json"
+    store_path = tmp_project / "output" / "findings_store.json"
     store_path.write_text(json.dumps(store, indent=2))
     return store_path
 
@@ -174,7 +175,7 @@ def _setup_successful_audit(orch, tmp_project):
     (tmp_project / "output" / "remediation.tf").write_text(
         'resource "null_resource" "test" {}'
     )
-    (tmp_project / "rollbacks" / "vol-abc123.tf").write_text(
+    (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text(
         'resource "null_resource" "rollback" {}'
     )
     return plans
@@ -290,8 +291,8 @@ class TestPreRemediationHook:
             pre_call = mock_run.call_args_list[0]
             args = pre_call[0][0]
             assert "pre-remediation.sh" in args[1]
-            assert str(tmp_project / "output" / "remediation.tf") in args[2]
-            assert str(tmp_project / "rollbacks" / "vol-abc123.tf") in args[3]
+            assert "remediation.tf" in args[2]
+            assert "vol-abc123.tf" in args[3]
 
     def test_hook_timeout_blocks_flow(self, tmp_project, findings_store_both_agents):
         """Pre-remediation hook timeout blocks the audit flow."""
@@ -348,7 +349,7 @@ class TestPostRemediationHook:
     def test_post_hook_called_after_rollback(self, tmp_project):
         """Post hook fires with 'rollback' action after confirmed rollback."""
         orch = Orchestrator(project_root=tmp_project, approver="test-user")
-        (tmp_project / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
+        (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
 
         with patch("orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
@@ -541,7 +542,7 @@ class TestRollbackFlow:
     def test_rollback_with_artifact_requests_confirmation(self, tmp_project):
         """Rollback with valid artifact returns needs_confirmation=True."""
         orch = Orchestrator(project_root=tmp_project, approver="test-user")
-        (tmp_project / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
+        (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
 
         result = orch.rollback("ROLLBACK vol-abc123")
         assert result.success is False
@@ -552,7 +553,7 @@ class TestRollbackFlow:
     def test_confirm_rollback_without_initiation_fails(self, tmp_project):
         """CONFIRM ROLLBACK without prior ROLLBACK is rejected."""
         orch = Orchestrator(project_root=tmp_project, approver="test-user")
-        (tmp_project / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
+        (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
 
         result = orch.rollback("CONFIRM ROLLBACK vol-abc123")
         assert result.success is False
@@ -561,7 +562,7 @@ class TestRollbackFlow:
     def test_full_rollback_flow(self, tmp_project):
         """ROLLBACK → CONFIRM ROLLBACK succeeds when artifact exists."""
         orch = Orchestrator(project_root=tmp_project, approver="test-user")
-        (tmp_project / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
+        (tmp_project / "output" / "rollbacks" / "vol-abc123.tf").write_text("resource {}")
 
         with patch("orchestrator.subprocess.run") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
@@ -633,7 +634,7 @@ class TestAgentSequencing:
             ],
             "summary": {"by_agent": {"finops": 1, "secops": 0}},
         }
-        (tmp_project / "findings_store.json").write_text(json.dumps(store))
+        (tmp_project / "output" / "findings_store.json").write_text(json.dumps(store))
 
         # Mock FinOps to return findings (store already written above)
         orch._finops.scan = MagicMock(

@@ -1,4 +1,4 @@
-"""Unit tests for llm_client.py.
+"""Unit tests for core/llm_client.py.
 
 Tests the shared LLM client module that all AI agents import from.
 Validates:
@@ -16,6 +16,8 @@ from unittest.mock import patch
 
 import pytest
 
+import core.llm_client as llm_client
+
 
 class TestGetClient:
     """Tests for get_client() → openai.OpenAI configured for OpenRouter."""
@@ -25,8 +27,6 @@ class TestGetClient:
         import openai
 
         with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key-abc123"}):
-            import llm_client
-
             importlib.reload(llm_client)
             client = llm_client.get_client()
 
@@ -35,8 +35,6 @@ class TestGetClient:
     def test_base_url_is_openrouter(self):
         """get_client() configures base_url to OpenRouter's API endpoint."""
         with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key-abc123"}):
-            import llm_client
-
             importlib.reload(llm_client)
             client = llm_client.get_client()
 
@@ -45,8 +43,6 @@ class TestGetClient:
     def test_api_key_passed_to_client(self):
         """get_client() passes the OPENROUTER_API_KEY to the OpenAI client."""
         with patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-or-test-key-xyz"}):
-            import llm_client
-
             importlib.reload(llm_client)
             client = llm_client.get_client()
 
@@ -58,8 +54,6 @@ class TestGetClient:
         env.pop("OPENROUTER_API_KEY", None)
 
         with patch.dict(os.environ, env, clear=True):
-            import llm_client
-
             importlib.reload(llm_client)
 
             with pytest.raises(EnvironmentError, match="OPENROUTER_API_KEY is not set"):
@@ -68,8 +62,6 @@ class TestGetClient:
     def test_raises_environment_error_when_key_is_empty_string(self):
         """get_client() raises EnvironmentError when OPENROUTER_API_KEY is empty."""
         with patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}):
-            import llm_client
-
             importlib.reload(llm_client)
 
             with pytest.raises(EnvironmentError, match="OPENROUTER_API_KEY is not set"):
@@ -85,8 +77,6 @@ class TestDefaultModel:
             os.environ,
             {"JANITOR_LLM_MODEL": "openai/gpt-4o-mini", "OPENROUTER_API_KEY": "k"},
         ):
-            import llm_client
-
             importlib.reload(llm_client)
 
             assert llm_client.DEFAULT_MODEL == "openai/gpt-4o-mini"
@@ -98,8 +88,6 @@ class TestDefaultModel:
         env["OPENROUTER_API_KEY"] = "k"
 
         with patch.dict(os.environ, env, clear=True):
-            import llm_client
-
             importlib.reload(llm_client)
 
             assert llm_client.DEFAULT_MODEL == "anthropic/claude-haiku-4-5"
@@ -107,8 +95,6 @@ class TestDefaultModel:
     def test_default_model_is_string(self):
         """DEFAULT_MODEL is always a string type."""
         with patch.dict(os.environ, {"OPENROUTER_API_KEY": "k"}):
-            import llm_client
-
             importlib.reload(llm_client)
 
             assert isinstance(llm_client.DEFAULT_MODEL, str)
@@ -123,8 +109,6 @@ class TestSensitiveDataExposure:
         env.pop("OPENROUTER_API_KEY", None)
 
         with patch.dict(os.environ, env, clear=True):
-            import llm_client
-
             importlib.reload(llm_client)
 
             with pytest.raises(EnvironmentError) as exc_info:
@@ -140,8 +124,6 @@ class TestSensitiveDataExposure:
     def test_module_repr_does_not_expose_api_key(self):
         """The client object's repr/str does not contain the raw API key."""
         with patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-or-secret-value-12345"}):
-            import llm_client
-
             importlib.reload(llm_client)
             client = llm_client.get_client()
 
@@ -154,8 +136,6 @@ class TestSensitiveDataExposure:
         """The llm_client module source code does not contain logging of the API key value."""
         import inspect
 
-        import llm_client
-
         source = inspect.getsource(llm_client)
         # Should not have print() or logging calls that could expose the key
         assert "print(api_key" not in source
@@ -167,22 +147,16 @@ class TestModuleInterface:
 
     def test_module_exports_get_client(self):
         """llm_client exposes get_client as a callable."""
-        import llm_client
-
         assert hasattr(llm_client, "get_client")
         assert callable(llm_client.get_client)
 
     def test_module_exports_default_model(self):
         """llm_client exposes DEFAULT_MODEL as a module-level attribute."""
-        import llm_client
-
         assert hasattr(llm_client, "DEFAULT_MODEL")
 
     def test_no_anthropic_import(self):
         """llm_client does not import the anthropic package (Req 13.5)."""
         import inspect
-
-        import llm_client
 
         source = inspect.getsource(llm_client)
         assert "import anthropic" not in source
