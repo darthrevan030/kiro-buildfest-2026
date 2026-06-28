@@ -620,3 +620,83 @@ class TestDriftDetectorOutputSchema:
             f"compared_scans should be ['id-prev-fixed', 'id-curr-fixed'], "
             f"got {result['compared_scans']}"
         )
+
+
+    @given(
+        prev_findings=unique_findings_strategy(min_size=0, max_size=5),
+        curr_findings=unique_findings_strategy(min_size=0, max_size=5),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_new_findings_contain_dicts(self, tmp_path, prev_findings, curr_findings):
+        """Every element in new_findings is a dict."""
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "Dict check."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", prev_findings, [], 5.0)
+            detector.save_snapshot("scan-curr", curr_findings, [], 10.0)
+            result = detector.detect(curr_findings)
+
+        for item in result["new_findings"]:
+            assert isinstance(item, dict), f"new_findings element must be dict, got {type(item)}"
+        for item in result["resolved_findings"]:
+            assert isinstance(item, dict), f"resolved_findings element must be dict, got {type(item)}"
+
+
+# ---------------------------------------------------------------------------
+# Negative Tests
+# ---------------------------------------------------------------------------
+
+
+class TestDriftDetectorNegativeCases:
+    """Negative tests for DriftDetector.
+
+    Validates behavior when preconditions are not met (insufficient history,
+    errors, etc.).
+    """
+
+    @given(
+        findings=unique_findings_strategy(min_size=0, max_size=5),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_insufficient_history_with_zero_snapshots(self, tmp_path, findings):
+        """With no snapshots, detect returns insufficient history — never drift data."""
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            result = detector.detect(findings)
+
+        assert result == {"drift": None, "reason": "insufficient history"}, (
+            f"With 0 snapshots, expected insufficient history, got {result}"
+        )
+
+    @given(
+        findings=unique_findings_strategy(min_size=0, max_size=5),
+        w=st.floats(min_value=0.0, max_value=1000.0, allow_nan=False, allow_infinity=False),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_insufficient_history_with_one_snapshot(self, tmp_path, findings, w):
+        """With only 1 snapshot, detect returns insufficient history."""
+        history_path = tmp_path / "scan_history.json"
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-001", findings, [], w)
+            result = detector.detect(findings)
+
+        assert result == {"drift": None, "reason": "insufficient history"}, (
+            f"With 1 snapshot, expected insufficient history, got {result}"
+        )
