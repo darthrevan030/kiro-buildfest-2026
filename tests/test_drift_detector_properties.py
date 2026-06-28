@@ -408,3 +408,65 @@ class TestDriftDetectorFindingDiffCorrectness:
             f"With identical findings, resolved_findings should be [], "
             f"got {result['resolved_findings']}"
         )
+
+
+    @given(findings=unique_findings_strategy(min_size=1, max_size=8))
+    @settings(max_examples=200, deadline=None)
+    def test_all_new_when_previous_empty(self, findings):
+        """When previous has no findings and current has some, all are new."""
+        history_path = _fresh_history_path()
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "All new findings."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", [], [], 0.0)
+            detector.save_snapshot("scan-curr", findings, [], 10.0)
+            result = detector.detect(findings)
+
+        expected_new_keys = {
+            (f["resource_id"], f["check_type"]) for f in findings
+            if f.get("resource_id") and f.get("check_type")
+        }
+        actual_new_keys = {
+            (f["resource_id"], f["check_type"]) for f in result["new_findings"]
+        }
+        assert actual_new_keys == expected_new_keys, (
+            f"All findings should be new. Expected: {expected_new_keys}\nGot: {actual_new_keys}"
+        )
+        assert result["resolved_findings"] == []
+
+    @given(findings=unique_findings_strategy(min_size=1, max_size=8))
+    @settings(max_examples=200, deadline=None)
+    def test_all_resolved_when_current_empty(self, findings):
+        """When current has no findings and previous had some, all are resolved."""
+        history_path = _fresh_history_path()
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "All findings resolved."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", findings, [], 10.0)
+            detector.save_snapshot("scan-curr", [], [], 0.0)
+            result = detector.detect([])
+
+        expected_resolved_keys = {
+            (f["resource_id"], f["check_type"]) for f in findings
+            if f.get("resource_id") and f.get("check_type")
+        }
+        actual_resolved_keys = {
+            (f["resource_id"], f["check_type"]) for f in result["resolved_findings"]
+        }
+        assert actual_resolved_keys == expected_resolved_keys, (
+            f"All findings should be resolved. Expected: {expected_resolved_keys}\n"
+            f"Got: {actual_resolved_keys}"
+        )
+        assert result["new_findings"] == []
