@@ -149,7 +149,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - detect returns {"drift": None, "reason": "insufficient history"} when < 2 snapshots; returns {"drift": None, "reason": "error"} on failure
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 8.10, 1.7, 1.8, 1.9, 1.11, 14.6_
 
-  - [ ] 5.4 Write property tests for DriftDetector
+  - [x] 5.4 Write property tests for DriftDetector
     - **Property 14: DriftDetector Max Snapshots Invariant**
     - For any sequence of save_snapshot calls, entries in scan_history.json never exceed 30
     - **Property 15: DriftDetector Waste Delta Correctness**
