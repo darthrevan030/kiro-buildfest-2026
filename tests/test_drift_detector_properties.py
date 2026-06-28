@@ -194,3 +194,68 @@ class TestDriftDetectorMaxSnapshotsInvariant:
             assert data[0]["scan_id"] == expected_first_id, (
                 f"First entry should be {expected_first_id}, got {data[0]['scan_id']}"
             )
+
+
+# ---------------------------------------------------------------------------
+# Property 15: DriftDetector Waste Delta Correctness
+# ---------------------------------------------------------------------------
+
+
+class TestDriftDetectorWasteDeltaCorrectness:
+    """Property 15: DriftDetector Waste Delta Correctness.
+
+    **Validates: Requirements 8.4**
+
+    For two snapshots with total_waste W_prev and W_curr,
+    waste_delta = W_curr - W_prev.
+    """
+
+    @given(
+        w_prev=st.floats(min_value=0.0, max_value=100000.0, allow_nan=False, allow_infinity=False),
+        w_curr=st.floats(min_value=0.0, max_value=100000.0, allow_nan=False, allow_infinity=False),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_waste_delta_equals_current_minus_previous(self, w_prev, w_curr):
+        """waste_delta must equal W_curr - W_prev for any two waste values."""
+        history_path = _fresh_history_path()
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "Drift analysis complete."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", [], [], w_prev)
+            detector.save_snapshot("scan-curr", [], [], w_curr)
+            result = detector.detect([])
+
+        expected_delta = w_curr - w_prev
+        assert abs(result["waste_delta"] - expected_delta) < 1e-6, (
+            f"waste_delta should be {expected_delta}, got {result['waste_delta']}"
+        )
+
+    @given(
+        w_prev=st.floats(min_value=0.0, max_value=100000.0, allow_nan=False, allow_infinity=False),
+    )
+    @settings(max_examples=200, deadline=None)
+    def test_zero_delta_when_waste_unchanged(self, w_prev):
+        """When waste is the same in both snapshots, delta is 0."""
+        history_path = _fresh_history_path()
+
+        with patch("agents.drift_detector.get_client") as mock_get_client:
+            mock_client = MagicMock()
+            mock_client.chat.completions.create.return_value = _mock_llm_response(
+                "No change in waste."
+            )
+            mock_get_client.return_value = mock_client
+
+            detector = DriftDetector(history_path=history_path)
+            detector.save_snapshot("scan-prev", [], [], w_prev)
+            detector.save_snapshot("scan-curr", [], [], w_prev)
+            result = detector.detect([])
+
+        assert result["waste_delta"] == 0.0, (
+            f"waste_delta should be 0.0 when waste unchanged, got {result['waste_delta']}"
+        )
