@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T06:45:07Z
+Generated: 2026-06-28T06:45:26Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -42,13 +42,13 @@ Generated: 2026-06-28T06:45:07Z
 | 36 | 1.2 Update `requirements.txt` with new dependencies | ✅ Done | .kiro/specs/cloud-janitor/requirements.md exists |
 | 37 | 1.3 Update `.gitignore` with sensitive data files | ✅ Done | no mapping |
 | 38 | 1.4 Write unit tests for `llm_client.py` | ✅ Done | no mapping |
-| 39 | 2. Implement Phase B AI agents (QueryInterpreter, RemediationExplainer, PolicySuggester) | ⏳ Partial | agents/remediation_architect.py exists |
+| 39 | 2. Implement Phase B AI agents (QueryInterpreter, RemediationExplainer, PolicySuggester) | ✅ Done | agents/remediation_architect.py exists |
 | 40 | 2.1 Implement `agents/query_interpreter.py` | ✅ Done | no mapping |
-| 41 | 2.2 Write property test for QueryInterpreter output validity | ⏳ Partial | no mapping |
+| 41 | 2.2 Write property test for QueryInterpreter output validity | ✅ Done | no mapping |
 | 42 | 2.3 Implement `agents/explainer.py` | ✅ Done | no mapping |
-| 43 | 2.4 Write property test for RemediationExplainer schema completeness | ⏳ Partial | agents/remediation_architect.py exists |
+| 43 | 2.4 Write property test for RemediationExplainer schema completeness | ✅ Done | agents/remediation_architect.py exists |
 | 44 | 2.5 Implement `agents/policy_suggester.py` | ✅ Done | no mapping |
-| 45 | 2.6 Write property test for PolicySuggester output bounds and exclusion | ⏳ Partial | no mapping |
+| 45 | 2.6 Write property test for PolicySuggester output bounds and exclusion | ✅ Done | no mapping |
 | 46 | 3. Implement Phase B AI agents (ResourceTagger, AnomalyDetector) | ❌ Pending | — |
 | 47 | 5. Implement Phase C platform agents (IncidentPolicyGenerator, DriftDetector) | ❌ Pending | — |
 | 48 | 6. Implement Phase C platform agents (MultiAccountOrchestrator, JanitorScheduler) | ❌ Pending | — |
