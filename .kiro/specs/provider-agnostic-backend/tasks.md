@@ -12,7 +12,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - Include full type hints and docstrings matching design document signatures
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-  - [ ] 1.2 Implement FixtureProvider in `mcp_server/backends/fixture_provider.py`
+  - [x] 1.2 Implement FixtureProvider in `mcp_server/backends/fixture_provider.py`
     - Move existing fixture-reading logic from `aws_janitor_mcp.py` into the class verbatim
     - Constructor accepts optional `fixtures_dir` parameter defaulting to project `fixtures/` directory
     - Implement `get_cost_data` with resource_type and min_idle_days filtering
