@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T02:27:35Z
+Generated: 2026-06-28T02:33:26Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -49,8 +49,8 @@ Generated: 2026-06-28T02:27:35Z
 | 43 | 3.1 Add PROVIDER_REGISTRY and `_load_provider()` to `aws_janitor_mcp.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 44 | 3.2 Refactor MCP tool functions to delegate to provider instance | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 45 | 3.3 Write property tests for provider selection | ✅ Done | no mapping |
-| 46 | 4. Checkpoint - Verify backward compatibility | ⏳ Partial | no mapping |
-| 47 | 5. Write backward compatibility property test | ❌ Pending | — |
+| 46 | 4. Checkpoint - Verify backward compatibility | ✅ Done | no mapping |
+| 47 | 5. Write backward compatibility property test | ⏳ Partial | no mapping |
 | 48 | 6. Update dependencies and documentation | ❌ Pending | — |
 | 49 | 6.1 Add boto3 to requirements.txt | ❌ Pending | — |
 | 50 | 6.2 Update `mcp_server/README.md` with provider architecture documentation | ❌ Pending | — |
