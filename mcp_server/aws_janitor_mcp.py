@@ -19,6 +19,7 @@ from agents.query_interpreter import QueryInterpreter
 from agents.explainer import RemediationExplainer
 from agents.policy_suggester import PolicySuggester
 from agents.tagger import ResourceTagger
+from agents.anomaly_detector import AnomalyDetector
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
@@ -250,6 +251,29 @@ def infer_resource_context(
             "risk_level": "low",
             "confidence": 0.0,
         }
+
+
+@mcp.tool()
+def detect_anomalies(resources: list, findings: list) -> list:
+    """
+    Detects suspicious resources not caught by rule-based checks.
+
+    Uses direct import of AnomalyDetector agent (no network transport).
+
+    Args:
+        resources: List of resource dicts from get_cost_data() and get_security_data().
+        findings: List of already-identified finding dicts from FinOps + SecOps agents.
+
+    Returns:
+        List of anomaly dicts, each with keys: anomaly_id, resource_id,
+        anomaly_type, description, severity, evidence.
+        On error: returns empty list (safe default).
+    """
+    try:
+        detector = AnomalyDetector()
+        return detector.detect(resources, findings)
+    except Exception:
+        return []
 
 
 if __name__ == "__main__":

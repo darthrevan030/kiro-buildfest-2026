@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-06-28T09:53:10Z
+Generated: 2026-06-28T09:53:59Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -70,8 +70,8 @@ Generated: 2026-06-28T09:53:10Z
 | 64 | 8.1 Add MCP tool `interpret_query` to `mcp_server/aws_janitor_mcp.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 65 | 8.2 Add MCP tool `explain_remediation` to `mcp_server/aws_janitor_mcp.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
 | 66 | 8.3 Add MCP tool `suggest_policies` to `mcp_server/aws_janitor_mcp.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
-| 67 | 8.4 Add MCP tool `infer_resource_context` to `mcp_server/aws_janitor_mcp.py` | ⏳ Partial | mcp_server/aws_janitor_mcp.py exists |
-| 68 | 8.5 Add MCP tool `detect_anomalies` to `mcp_server/aws_janitor_mcp.py` | ❌ Pending | — |
+| 67 | 8.4 Add MCP tool `infer_resource_context` to `mcp_server/aws_janitor_mcp.py` | ✅ Done | mcp_server/aws_janitor_mcp.py exists |
+| 68 | 8.5 Add MCP tool `detect_anomalies` to `mcp_server/aws_janitor_mcp.py` | ⏳ Partial | mcp_server/aws_janitor_mcp.py exists |
 | 69 | 8.6 Add MCP tool `policy_from_incident` to `mcp_server/aws_janitor_mcp.py` | ❌ Pending | — |
 | 70 | 8.7 Integrate AI agents into `orchestrator.py` | ❌ Pending | — |
 | 71 | 8.8 Write unit tests for MCP tools (Phase B+C) | ❌ Pending | — |
