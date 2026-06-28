@@ -81,7 +81,7 @@ Refactor the MCP server to use a pluggable provider architecture. Extract existi
     - Add `APScheduler>=3.10.0` (for scheduled scans)
     - _Requirements: 10.1_
 
-  - [ ] 6.2 Rewrite `README.md` at project root as a product README
+  - [x] 6.2 Rewrite `README.md` at project root as a product README
     - Current file is two lines ("# Cloud Janitor" + setup hook command) — replace entirely
     - Structure:
       - One-line product description ("AI-native AWS cloud auditor — finds waste and security gaps, generates Terraform remediations, requires human approval before applying")
