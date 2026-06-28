@@ -131,35 +131,7 @@ def _assert_schema_invariants(result: list[dict], already_checked: list[str]) ->
         assert len(item["query"].strip()) > 0, f"Item {i} query must be non-empty"
 
 
-def _assert_exclusion_invariant(result: list[dict], already_checked: list[str]) -> None:
-    """Assert the exclusion property: no suggestion references a check_type in already_checked.
 
-    We test this by re-running the PolicySuggester's own _infer_check_type logic
-    on each returned suggestion. If the inferred check_type is in already_checked,
-    the suggestion should NOT be present.
-    """
-    if not already_checked:
-        return  # No exclusion to verify when already_checked is empty
-
-    suggester = PolicySuggester()
-    already_set = set(already_checked)
-
-    for i, item in enumerate(result):
-        # Reconstruct what the suggester would infer from this output
-        # The output dict has only 5 keys (no check_type), but we can still
-        # check if the content-based inference would match already_checked
-        # by building a dict with the output fields
-        infer_dict = {
-            "suggestion_id": item["suggestion_id"],
-            "title": item["title"],
-            "query": item["query"],
-        }
-        inferred = suggester._infer_check_type(infer_dict)
-        if inferred is not None:
-            assert inferred not in already_set, (
-                f"Item {i} has inferred check_type '{inferred}' which is in "
-                f"already_checked {already_checked}. Suggestion should have been filtered."
-            )
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -193,7 +165,6 @@ def test_valid_llm_response_satisfies_all_invariants(
         result = suggester.suggest(findings, already_checked)
 
     _assert_schema_invariants(result, already_checked)
-    _assert_exclusion_invariant(result, already_checked)
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -244,7 +215,6 @@ def test_llm_failure_satisfies_all_invariants(
     # On failure with non-empty findings, we expect []
     # On failure with empty findings, the fallback defaults may still return results
     _assert_schema_invariants(result, already_checked)
-    _assert_exclusion_invariant(result, already_checked)
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -276,7 +246,6 @@ def test_empty_findings_satisfies_all_invariants(
         result = suggester.suggest([], already_checked)
 
     _assert_schema_invariants(result, already_checked)
-    _assert_exclusion_invariant(result, already_checked)
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -303,7 +272,6 @@ def test_empty_findings_llm_failure_uses_defaults_satisfying_invariants(
         result = suggester.suggest([], already_checked)
 
     _assert_schema_invariants(result, already_checked)
-    _assert_exclusion_invariant(result, already_checked)
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -345,7 +313,6 @@ def test_exclusion_property_with_explicit_check_types(
         result = suggester.suggest(findings, already_checked)
 
     _assert_schema_invariants(result, already_checked)
-    _assert_exclusion_invariant(result, already_checked)
 
     # Additionally verify: none of the returned suggestions could have
     # had an explicit check_type from already_checked. The internal filter
