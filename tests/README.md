@@ -53,6 +53,7 @@ pytest -k "approval"
 
 | File | Description |
 |------|-------------|
+| `test_aws_provider.py` | AWSProvider live backend (moto-mocked): cost data, security data, dependency checks |
 | `test_fixture.py` | Validates fixture JSON schema and content (required fields, types, flaggable data) |
 | `test_mcp_tools_phase_bc.py` | MCP tool endpoints (get_cost_data, get_security_data, check_dependencies, etc.) |
 | `test_mcp_interpret_query.py` | MCP interpret_query tool integration with QueryInterpreter |

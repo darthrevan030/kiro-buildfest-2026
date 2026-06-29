@@ -1,7 +1,7 @@
 [project]
 name = "cloud-janitor"
 version = "0.1.0"
-description = "Multi-agent AWS infrastructure auditor and remediation system using MCP protocol"
+description = "Multi-agent cloud infrastructure auditor and remediation system using MCP protocol"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -12,6 +12,7 @@ dependencies = [
     "hypothesis>=6.155.7",
     "mcp>=1.28.1",
     "openai>=2.44.0",
+    "python-dotenv>=1.0.0",
     "pyyaml>=6.0.3",
     "streamlit>=1.45.0",
     "terraform-local>=0.26.0",
@@ -19,6 +20,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "moto[ec2,elasticache,cloudwatch]>=5.0.0",
     "pytest>=9.1.1",
 ]
 
