@@ -324,7 +324,7 @@ class TestMCPToolsSchemasFixtureMode:
             assert required_keys == set(item.keys())
             assert item["severity"] in {"high", "medium", "low"}
 
-    @patch("core.llm_client.get_client")
+    @patch("agents.incident_policy_generator.get_client")
     def test_policy_from_incident_returns_valid_schema(self, mock_get_client, fixture_backend_env, tmp_path):
         """policy_from_incident returns list of dicts with required keys."""
         mock_get_client.return_value = _make_mock_llm_client()

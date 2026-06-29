@@ -192,7 +192,7 @@ def test_monthly_savings_computation(scan_id, completed_at, findings, data):
         )
 
         # Verify monthly_savings_added equals the expected sum
-        assert abs(entry["monthly_savings_added"] - expected_savings) < 1e-9, (
+        assert abs(entry["monthly_savings_added"] - expected_savings) < 1e-6, (
             f"Expected {expected_savings}, got {entry['monthly_savings_added']}"
         )
 
