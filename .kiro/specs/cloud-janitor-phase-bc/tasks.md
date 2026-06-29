@@ -277,8 +277,8 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Verify deterministic output when LLM is also mocked
     - _Requirements: 12.3, 12.4, 12.5_
 
-- [ ] 10. Implement Streamlit UI integration
-  - [ ] 10.1 Add NL query input and AI panels to `app.py`
+- [x] 10. Implement Streamlit UI integration
+  - [x] 10.1 Add NL query input and AI panels to `app.py`
     - Add natural language query text input with QueryInterpreter integration
     - Add remediation explanation panel (rendered alongside approval gate)
     - Add policy suggestions panel (shown post-scan)
