@@ -269,7 +269,7 @@ This plan implements 9 features spanning Phase B (Tier 2 AI Features) and Phase 
     - Used for development/testing when JANITOR_BACKEND=fixture
     - _Requirements: 12.3_
 
-  - [-] 9.3 Write integration tests for fixture mode
+  - [x] 9.3 Write integration tests for fixture mode
     - Test full pipeline: NL query → scan → anomaly → drift in fixture mode
     - Test all MCP tools return valid schemas in fixture mode
     - Test multi-account orchestration completes without exceptions
