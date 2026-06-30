@@ -1301,15 +1301,30 @@ st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 if MultiAccountOrchestrator is not None:
     with st.expander("🌐 Multi-Account View", expanded=False):
         if st.button("Run Multi-Account Audit", key="btn_multi_account", use_container_width=True):
-            with st.spinner("Running audits across accounts..."):
-                try:
-                    multi_orch = MultiAccountOrchestrator()
-                    results = multi_orch.run_all()
-                    st.session_state.multi_account_results = results
-                    st.success(f"Multi-account audit complete — {results.get('accounts_scanned', 0)} account(s) scanned.")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Multi-account audit failed: {e}")
+            _accounts_file = PROJECT_ROOT / "accounts.json"
+            if not _accounts_file.exists():
+                _example_file = PROJECT_ROOT / "accounts.json.example"
+                if _example_file.exists():
+                    st.error(
+                        "**accounts.json not found.** "
+                        "Copy `accounts.json.example` to `accounts.json` and fill in your account details."
+                    )
+                else:
+                    st.error(
+                        "**accounts.json not found.** "
+                        "Create an `accounts.json` file in the project root with your AWS account configurations. "
+                        "See the README for the expected format."
+                    )
+            else:
+                with st.spinner("Running audits across accounts..."):
+                    try:
+                        multi_orch = MultiAccountOrchestrator()
+                        results = multi_orch.run_all()
+                        st.session_state.multi_account_results = results
+                        st.success(f"Multi-account audit complete — {results.get('accounts_scanned', 0)} account(s) scanned.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Multi-account audit failed: {e}")
 
         if st.session_state.multi_account_results is not None:
             ma = st.session_state.multi_account_results
