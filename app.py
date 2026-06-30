@@ -22,41 +22,24 @@ import streamlit as st
 
 from orchestrator import ApprovalResult, AuditResult, Orchestrator, RollbackResult
 
-# Phase B+C agent imports — wrapped in try/except since these are new modules
-try:
-    from agents.query_interpreter import QueryInterpreter
-except ImportError:
-    QueryInterpreter = None
-
-try:
-    from agents.explainer import RemediationExplainer
-except ImportError:
-    RemediationExplainer = None
-
-try:
-    from agents.policy_suggester import PolicySuggester
-except ImportError:
-    PolicySuggester = None
-
-try:
-    from agents.anomaly_detector import AnomalyDetector
-except ImportError:
-    AnomalyDetector = None
-
-try:
-    from agents.drift_detector import DriftDetector
-except ImportError:
-    DriftDetector = None
-
-try:
-    from agents.multi_account_orchestrator import MultiAccountOrchestrator
-except ImportError:
-    MultiAccountOrchestrator = None
-
-try:
-    from scheduler import JanitorScheduler
-except ImportError:
-    JanitorScheduler = None
+# Phase B+C agent imports — optional modules that may not be installed yet.
+# Each tuple is (module_path, attribute_name). On ImportError the global is set to None,
+# preserving the same fallback behavior the rest of the UI relies on.
+_PHASE_BC_AGENTS = [
+    ("agents.query_interpreter", "QueryInterpreter"),
+    ("agents.explainer", "RemediationExplainer"),
+    ("agents.policy_suggester", "PolicySuggester"),
+    ("agents.anomaly_detector", "AnomalyDetector"),
+    ("agents.drift_detector", "DriftDetector"),
+    ("agents.multi_account_orchestrator", "MultiAccountOrchestrator"),
+    ("scheduler", "JanitorScheduler"),
+]
+for _mod_name, _attr_name in _PHASE_BC_AGENTS:
+    try:
+        _mod = __import__(_mod_name, fromlist=[_attr_name])
+        globals()[_attr_name] = getattr(_mod, _attr_name)
+    except (ImportError, AttributeError):
+        globals()[_attr_name] = None
 
 # ──────────────────────────────────────────────────────────────────────
 # Page config
