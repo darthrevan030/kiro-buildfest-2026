@@ -79,7 +79,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Implement `get_gate()`, `set_gate()`, `is_corrupted` property
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-  - [ ] 3.2 Integrate `ApprovalGateStore` into Orchestrator approval/rollback flow
+  - [x] 3.2 Integrate `ApprovalGateStore` into Orchestrator approval/rollback flow
     - Load gate store on Orchestrator init; check `is_corrupted` before any gate access
     - Persist gate state on every attempt count change or lockout
     - Enforce max 3 attempts before lockout; reject when locked with descriptive error

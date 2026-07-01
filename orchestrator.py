@@ -47,6 +47,7 @@ def _to_bash_path(p: Path) -> str:
 
 from agents.approval_gate import (
     ApprovalGate,
+    ApprovalGateStore,
     parse_approval,
     parse_confirm_rollback,
     parse_rollback,
@@ -244,6 +245,10 @@ class Orchestrator:
             ledger_path=self.project_root / "output" / "savings_ledger.json",
             findings_store_path=self.findings_store_path,
         )
+
+        # Persistent approval gate store
+        self._gate_store = ApprovalGateStore(self.output_dir / "approval_gates.json")
+        self._gate_store.load()
 
         # Approval gates per resource (keyed by resource_id)
         self._approval_gates: dict[str, ApprovalGate] = {}
@@ -499,11 +504,24 @@ class Orchestrator:
                 error=f"No remediation plan found for resource: {resource_id}",
             )
 
+        # Guard: reject if gate store is corrupted
+        if self._gate_store.is_corrupted:
+            return ApprovalResult(
+                success=False,
+                resource_id=resource_id,
+                error="Approval gate store is corrupted — all operations locked until operator resets the store file",
+                locked=True,
+            )
+
         # Use approval gate (creates one if needed)
         gate = self._get_or_create_gate(resource_id)
         result = gate.attempt_approval(command, resource_id)
 
         if not result["valid"]:
+            # Persist gate state on every failed attempt or lockout
+            self._gate_store.set_gate(
+                resource_id, gate.attempts, gate.locked, gate.max_attempts
+            )
             if result.get("locked"):
                 self._log_action("approval", resource_id, "failure", "Max attempts exceeded")
                 return ApprovalResult(
@@ -579,6 +597,24 @@ class Orchestrator:
                 error="Invalid command format. Expected: ROLLBACK <resource-id>",
             )
 
+        # Guard: reject if gate store is corrupted
+        if self._gate_store.is_corrupted:
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error="Approval gate store is corrupted — all operations locked until operator resets the store file",
+            )
+
+        # Enforce gate: check attempts / lockout for rollback
+        gate = self._get_or_create_gate(resource_id)
+        if gate.locked:
+            self._log_action("rollback", resource_id, "failure", "Max attempts exceeded")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error="Max attempts exceeded — rollback locked for this resource",
+            )
+
         # Validate rollback artifact exists
         rollback_path = self.rollbacks_dir / f"{resource_id}.tf"
         if not rollback_path.exists():
@@ -592,6 +628,20 @@ class Orchestrator:
         # Parse the rollback command
         result = parse_rollback(command, resource_id)
         if not result["valid"]:
+            # Count as a failed attempt against the gate
+            gate._attempts += 1
+            if gate._attempts >= gate.max_attempts:
+                gate._locked = True
+            self._gate_store.set_gate(
+                resource_id, gate.attempts, gate.locked, gate.max_attempts
+            )
+            if gate.locked:
+                self._log_action("rollback", resource_id, "failure", "Max attempts exceeded")
+                return RollbackResult(
+                    success=False,
+                    resource_id=resource_id,
+                    error="Max attempts exceeded — rollback locked for this resource",
+                )
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
@@ -824,9 +874,19 @@ class Orchestrator:
         return None
 
     def _get_or_create_gate(self, resource_id: str) -> ApprovalGate:
-        """Get or create an approval gate for a resource."""
+        """Get or create an approval gate for a resource.
+
+        Restores persisted state (attempts, locked) from the gate store
+        when creating a new in-memory gate instance.
+        """
         if resource_id not in self._approval_gates:
-            self._approval_gates[resource_id] = ApprovalGate(max_attempts=3)
+            gate = ApprovalGate(max_attempts=3)
+            # Restore persisted state if available
+            persisted = self._gate_store.get_gate(resource_id)
+            if persisted:
+                gate._attempts = persisted.get("attempts", 0)
+                gate._locked = persisted.get("locked", False)
+            self._approval_gates[resource_id] = gate
         return self._approval_gates[resource_id]
 
     def _handle_confirm_rollback(self, command: str) -> RollbackResult:
@@ -846,6 +906,24 @@ class Orchestrator:
                 error="Missing resource ID in confirm rollback command",
             )
 
+        # Guard: reject if gate store is corrupted
+        if self._gate_store.is_corrupted:
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error="Approval gate store is corrupted — all operations locked until operator resets the store file",
+            )
+
+        # Enforce gate: check attempts / lockout
+        gate = self._get_or_create_gate(resource_id)
+        if gate.locked:
+            self._log_action("rollback", resource_id, "failure", "Max attempts exceeded")
+            return RollbackResult(
+                success=False,
+                resource_id=resource_id,
+                error="Max attempts exceeded — rollback locked for this resource",
+            )
+
         # Validate resource was pending rollback
         if resource_id not in self._pending_rollbacks:
             return RollbackResult(
@@ -858,6 +936,20 @@ class Orchestrator:
         # Parse the confirm rollback command
         result = parse_confirm_rollback(command, resource_id)
         if not result["valid"]:
+            # Count as a failed attempt against the gate
+            gate._attempts += 1
+            if gate._attempts >= gate.max_attempts:
+                gate._locked = True
+            self._gate_store.set_gate(
+                resource_id, gate.attempts, gate.locked, gate.max_attempts
+            )
+            if gate.locked:
+                self._log_action("rollback", resource_id, "failure", "Max attempts exceeded")
+                return RollbackResult(
+                    success=False,
+                    resource_id=resource_id,
+                    error="Max attempts exceeded — rollback locked for this resource",
+                )
             return RollbackResult(
                 success=False,
                 resource_id=resource_id,
