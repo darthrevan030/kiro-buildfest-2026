@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import uuid
@@ -61,6 +62,47 @@ from agents.savings_tracker import SavingsTracker
 
 
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
+
+TF_CMD_ALLOWLIST = {"terraform", "tflocal"}
+
+
+def _validate_tf_cmd() -> str:
+    """Validate and resolve TF_CMD from environment.
+
+    Returns:
+        Absolute path to the validated binary.
+
+    Raises:
+        RuntimeError: If TF_CMD fails any validation check.
+    """
+    raw = os.environ.get("TF_CMD", "tflocal")
+
+    # Reject path separators
+    if "/" in raw or "\\" in raw:
+        raise RuntimeError(
+            f"TF_CMD contains path separators: '{raw}'. "
+            f"Only bare binary names are permitted: {sorted(TF_CMD_ALLOWLIST)}"
+        )
+
+    # Extract basename (redundant given separator check, but defense-in-depth)
+    basename = os.path.basename(raw)
+
+    # Validate against allowlist
+    if basename not in TF_CMD_ALLOWLIST:
+        raise RuntimeError(
+            f"TF_CMD '{basename}' is not in the allowlist. "
+            f"Permitted values: {sorted(TF_CMD_ALLOWLIST)}"
+        )
+
+    # Resolve to absolute path via PATH lookup
+    resolved = shutil.which(basename)
+    if resolved is None:
+        raise RuntimeError(
+            f"TF_CMD '{basename}' could not be found on PATH."
+        )
+
+    return resolved
+
 
 PROJECT_ROOT = Path(__file__).parent
 FINDINGS_STORE_PATH = PROJECT_ROOT / "output" / "findings_store.json"
@@ -158,6 +200,9 @@ class Orchestrator:
         self.rollbacks_dir = self.project_root / "output" / "rollbacks"
         self.audit_log_path = self.project_root / "output" / "logs" / "audit.log"
         self.approver = approver
+
+        # Validate and resolve TF_CMD binary
+        self._tf_cmd = _validate_tf_cmd()
 
         # Reasoning logger (shared across all agents)
         self._reasoning_logger = ReasoningLogger(
@@ -477,7 +522,7 @@ class Orchestrator:
 
         # Execute terraform apply against LocalStack
         apply_result = subprocess.run(
-            [TF_CMD, "apply", "-auto-approve"],
+            [self._tf_cmd, "apply", "-auto-approve"],
             capture_output=True,
             text=True,
             timeout=120,
@@ -485,10 +530,10 @@ class Orchestrator:
         )
         if apply_result.returncode != 0:
             error = apply_result.stderr.strip() or apply_result.stdout.strip()
-            self._log_action("execution", resource_id, "failure", f"{TF_CMD} apply failed: {error}")
+            self._log_action("execution", resource_id, "failure", f"{self._tf_cmd} apply failed: {error}")
             return ApprovalResult(
                 success=False,
-                error=f"{TF_CMD} apply failed: {error}",
+                error=f"{self._tf_cmd} apply failed: {error}",
                 resource_id=resource_id,
             )
 

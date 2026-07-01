@@ -45,7 +45,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - _Requirements: 4.1, 4.3, 4.5, 4.6_
 
 - [ ] 2. Implement security validation layer
-  - [ ] 2.1 Implement TF_CMD validation in Orchestrator
+  - [x] 2.1 Implement TF_CMD validation in Orchestrator
     - Add `TF_CMD_ALLOWLIST = {"terraform", "tflocal"}` constant
     - Implement `_validate_tf_cmd()` function: reject path separators, validate basename against allowlist, resolve via `shutil.which()`, raise `RuntimeError` on any failure
     - Call `_validate_tf_cmd()` during Orchestrator `__init__`
