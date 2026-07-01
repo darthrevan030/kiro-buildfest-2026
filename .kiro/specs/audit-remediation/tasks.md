@@ -85,7 +85,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Enforce max 3 attempts before lockout; reject when locked with descriptive error
     - _Requirements: 1.1, 1.2, 1.5, 6.1, 6.2_
 
-  - [ ] 3.3 Write property tests for approval gate persistence
+  - [x] 3.3 Write property tests for approval gate persistence
     - **Property 8: Approval Gate Persistence Round Trip**
     - **Property 9: Corrupted Gate Store Locks All Gates**
     - Property 9 test must call Orchestrator's approve/rollback methods with a real resource_id against a corrupted store and assert rejection — not just assert `store.is_corrupted == True` after a bad load. Test the guard (Req 6.4 integration), not just the flag.

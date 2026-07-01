@@ -399,6 +399,8 @@ class ApprovalGateStore:
             data = json.loads(content)
             if not isinstance(data, dict) or "gates" not in data:
                 raise ValueError("Missing 'gates' key")
+            if not isinstance(data["gates"], list):
+                raise ValueError("'gates' must be a list")
             self._gates = {
                 g["resource_id"]: g
                 for g in data["gates"]

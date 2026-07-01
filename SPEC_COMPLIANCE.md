@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-01T17:45:59Z
+Generated: 2026-07-01T18:02:58Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -19,7 +19,7 @@ Generated: 2026-07-01T17:45:59Z
 | 13 | 2.5 Write property test for resource ID extraction | ✅ Done | no mapping |
 | 14 | 3. Implement persistent approval gates | ❌ Pending | — |
 | 15 | 3.1 Implement `ApprovalGateStore` class | ✅ Done | no mapping |
-| 16 | 3.2 Integrate `ApprovalGateStore` into Orchestrator approval/rollback flow | ⏳ Partial | output/rollbacks/ exists |
+| 16 | 3.2 Integrate `ApprovalGateStore` into Orchestrator approval/rollback flow | ✅ Done | output/rollbacks/ exists |
 | 17 | 3.3 Write property tests for approval gate persistence | ❌ Pending | — |
 | 18 | 3.4 Write property test for gate lockout invariant | ❌ Pending | — |
 | 19 | 3.5 Write unit tests for atomic write failure (`tests/test_gate_persistence.py`) | ❌ Pending | — |
