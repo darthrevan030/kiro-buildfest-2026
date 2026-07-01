@@ -51,7 +51,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Call `_validate_tf_cmd()` during Orchestrator `__init__`
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-  - [ ] 2.2 Write property test for TF_CMD validation
+  - [x] 2.2 Write property test for TF_CMD validation
     - **Property 2: TF_CMD Validation Partition**
     - **Validates: Requirements 2.1, 2.2, 2.3**
 
