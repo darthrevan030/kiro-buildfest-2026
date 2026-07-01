@@ -216,7 +216,10 @@ Transform Cloud Janitor from a development-time project into a pip-installable, 
     - Verify `import cloud_janitor.nonexistent` raises `ModuleNotFoundError`
     - _Requirements: 3.2, 3.3, 3.5, 3.6, 9.1, 9.5, 10.1, 10.3_
 
-- [ ] 8. Final checkpoint — Ensure all tests pass
+- [ ] 8. Session isolation (Deferred — Audit Remediation REQ 14)
+  - [ ] 8.1 Generate UUID subdir per Streamlit session under `output/`, thread session path through all artifact reads/writes in Orchestrator and `app.py`, implement session cleanup daemon with configurable retention (default 24h). See Requirement 14 in `.kiro/specs/audit-remediation/requirements.md`.
+
+- [ ] 9. Final checkpoint — Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
   - Verify full test suite passes on editable install
   - Verify `pip wheel .` + `twine check` passes
