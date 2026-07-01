@@ -6,7 +6,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
 
 ## Tasks
 
-- [ ] 1. Create foundational modules and path configuration
+- [x] 1. Create foundational modules and path configuration
   - [x] 1.1 Create `core/paths.py` centralized path configuration with directory creation helper
     - Create `core/__init__.py` if it does not exist
     - Implement `core/paths.py` with all path constants as specified in the design: `PROJECT_ROOT`, `OUTPUT_DIR`, `ROLLBACKS_DIR`, `LOGS_DIR`, `POLICIES_DIR`, `FINDINGS_STORE_PATH`, `AUDIT_LOG_PATH`, `REASONING_LOG_PATH`, `APPROVAL_GATES_PATH`, `SAVINGS_LEDGER_PATH`, `HOOKS_DIR`, `REQUIRED_DIRS`
@@ -37,7 +37,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - **Property 12: JSONL Error Record Format**
     - **Validates: Requirements 12.1, 12.2, 12.3**
 
-  - [ ] 1.6 Write unit tests for path configuration and directory creation (`tests/test_path_config.py`)
+  - [x] 1.6 Write unit tests for path configuration and directory creation (`tests/test_path_config.py`)
     - Test that `ensure_output_dirs()` creates all `REQUIRED_DIRS` when they do not exist
     - Test that `ensure_output_dirs()` raises descriptive error when directory creation fails (mocked `os.makedirs` raising `OSError`)
     - Test that `REQUIRED_DIRS` contains exactly `[OUTPUT_DIR, ROLLBACKS_DIR, LOGS_DIR, POLICIES_DIR]`

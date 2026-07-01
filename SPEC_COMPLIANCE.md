@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-01T16:59:50Z
+Generated: 2026-07-01T17:04:30Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -9,7 +9,7 @@ Generated: 2026-07-01T16:59:50Z
 | 3 | 1.2 Create `core/error_telemetry.py` structured error module | ✅ Done | no mapping |
 | 4 | 1.3 Create `bin/tflocal` wrapper script | ✅ Done | no mapping |
 | 5 | 1.4 Write smoke tests for `bin/tflocal` wrapper (`tests/test_bin_tflocal.py`) | ✅ Done | no mapping |
-| 6 | 1.5 Write property tests for `core/error_telemetry.py` | ❌ Pending | — |
+| 6 | 1.5 Write property tests for `core/error_telemetry.py` | ✅ Done | no mapping |
 | 7 | 1.6 Write unit tests for path configuration and directory creation (`tests/test_path_config.py`) | ❌ Pending | — |
 | 8 | 2. Implement security validation layer | ❌ Pending | — |
 | 9 | 2.1 Implement TF_CMD validation in Orchestrator | ❌ Pending | — |
