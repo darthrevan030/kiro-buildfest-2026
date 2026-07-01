@@ -71,7 +71,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - **Property 4: Resource ID Extraction Allowlist**
     - **Validates: Requirements 9.1, 9.2, 9.3**
 
-- [ ] 3. Implement persistent approval gates
+- [x] 3. Implement persistent approval gates
   - [x] 3.1 Implement `ApprovalGateStore` class
     - Create or update `agents/approval_gate.py` with `ApprovalGateStore` class
     - Implement `load()`: parse JSON, handle corruption (log WARNING, set `__corrupted__` flag, lock all gates)
@@ -95,7 +95,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - **Property 1: Approval Gate Lockout Invariant**
     - **Validates: Requirements 1.2, 1.5**
 
-  - [ ] 3.5 Write unit tests for atomic write failure (`tests/test_gate_persistence.py`)
+  - [x] 3.5 Write unit tests for atomic write failure (`tests/test_gate_persistence.py`)
     - Test that atomic write-then-rename persists gate state correctly on success
     - Test behavior when `os.replace` is mocked to raise `OSError` (verify temp file cleanup, no corruption)
     - Test that loading a corrupted store (invalid JSON, missing `"gates"` key) results in `is_corrupted == True`
