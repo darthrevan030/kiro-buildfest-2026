@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-01T18:02:58Z
+Generated: 2026-07-01T18:12:51Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -20,7 +20,7 @@ Generated: 2026-07-01T18:02:58Z
 | 14 | 3. Implement persistent approval gates | ❌ Pending | — |
 | 15 | 3.1 Implement `ApprovalGateStore` class | ✅ Done | no mapping |
 | 16 | 3.2 Integrate `ApprovalGateStore` into Orchestrator approval/rollback flow | ✅ Done | output/rollbacks/ exists |
-| 17 | 3.3 Write property tests for approval gate persistence | ❌ Pending | — |
+| 17 | 3.3 Write property tests for approval gate persistence | ✅ Done | "APPROVE" found in codebase |
 | 18 | 3.4 Write property test for gate lockout invariant | ❌ Pending | — |
 | 19 | 3.5 Write unit tests for atomic write failure (`tests/test_gate_persistence.py`) | ❌ Pending | — |
 | 20 | 4. Checkpoint - Ensure all tests pass | ❌ Pending | — |

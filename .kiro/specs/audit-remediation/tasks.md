@@ -91,7 +91,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Property 9 test must call Orchestrator's approve/rollback methods with a real resource_id against a corrupted store and assert rejection — not just assert `store.is_corrupted == True` after a bad load. Test the guard (Req 6.4 integration), not just the flag.
     - **Validates: Requirements 6.1, 6.2, 6.4**
 
-  - [ ] 3.4 Write property test for gate lockout invariant
+  - [x] 3.4 Write property test for gate lockout invariant
     - **Property 1: Approval Gate Lockout Invariant**
     - **Validates: Requirements 1.2, 1.5**
 
