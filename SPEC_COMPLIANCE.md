@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-01T17:36:24Z
+Generated: 2026-07-01T17:40:44Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -11,12 +11,12 @@ Generated: 2026-07-01T17:36:24Z
 | 5 | 1.4 Write smoke tests for `bin/tflocal` wrapper (`tests/test_bin_tflocal.py`) | ✅ Done | no mapping |
 | 6 | 1.5 Write property tests for `core/error_telemetry.py` | ✅ Done | no mapping |
 | 7 | 1.6 Write unit tests for path configuration and directory creation (`tests/test_path_config.py`) | ✅ Done | no mapping |
-| 8 | 2. Implement security validation layer | ❌ Pending | — |
+| 8 | 2. Implement security validation layer | ✅ Done | no mapping |
 | 9 | 2.1 Implement TF_CMD validation in Orchestrator | ✅ Done | no mapping |
 | 10 | 2.2 Write property test for TF_CMD validation | ✅ Done | no mapping |
 | 11 | 2.3 Write unit tests for TF_CMD PATH resolution (`tests/test_tf_cmd_validation.py`) | ✅ Done | no mapping |
 | 12 | 2.4 Implement resource ID extraction with allowlist validation | ✅ Done | no mapping |
-| 13 | 2.5 Write property test for resource ID extraction | ❌ Pending | — |
+| 13 | 2.5 Write property test for resource ID extraction | ✅ Done | no mapping |
 | 14 | 3. Implement persistent approval gates | ❌ Pending | — |
 | 15 | 3.1 Implement `ApprovalGateStore` class | ❌ Pending | — |
 | 16 | 3.2 Integrate `ApprovalGateStore` into Orchestrator approval/rollback flow | ❌ Pending | — |

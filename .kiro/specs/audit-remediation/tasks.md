@@ -72,7 +72,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - **Validates: Requirements 9.1, 9.2, 9.3**
 
 - [ ] 3. Implement persistent approval gates
-  - [ ] 3.1 Implement `ApprovalGateStore` class
+  - [x] 3.1 Implement `ApprovalGateStore` class
     - Create or update `agents/approval_gate.py` with `ApprovalGateStore` class
     - Implement `load()`: parse JSON, handle corruption (log WARNING, set `__corrupted__` flag, lock all gates)
     - Implement `save()`: atomic write-then-rename using `tempfile.mkstemp` + `os.replace`
