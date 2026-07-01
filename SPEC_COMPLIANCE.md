@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-01T18:18:23Z
+Generated: 2026-07-01T18:20:51Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -17,12 +17,12 @@ Generated: 2026-07-01T18:18:23Z
 | 11 | 2.3 Write unit tests for TF_CMD PATH resolution (`tests/test_tf_cmd_validation.py`) | ✅ Done | no mapping |
 | 12 | 2.4 Implement resource ID extraction with allowlist validation | ✅ Done | no mapping |
 | 13 | 2.5 Write property test for resource ID extraction | ✅ Done | no mapping |
-| 14 | 3. Implement persistent approval gates | ❌ Pending | — |
+| 14 | 3. Implement persistent approval gates | ✅ Done | "APPROVE" found in codebase |
 | 15 | 3.1 Implement `ApprovalGateStore` class | ✅ Done | no mapping |
 | 16 | 3.2 Integrate `ApprovalGateStore` into Orchestrator approval/rollback flow | ✅ Done | output/rollbacks/ exists |
 | 17 | 3.3 Write property tests for approval gate persistence | ✅ Done | "APPROVE" found in codebase |
 | 18 | 3.4 Write property test for gate lockout invariant | ✅ Done | no mapping |
-| 19 | 3.5 Write unit tests for atomic write failure (`tests/test_gate_persistence.py`) | ⏳ Partial | no mapping |
+| 19 | 3.5 Write unit tests for atomic write failure (`tests/test_gate_persistence.py`) | ✅ Done | no mapping |
 | 20 | 4. Checkpoint - Ensure all tests pass | ❌ Pending | — |
 | 21 | 5. Implement rollback path with Terraform execution | ❌ Pending | — |
 | 22 | 5.1 Implement Terraform validate + apply rollback flow | ❌ Pending | — |

@@ -102,7 +102,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Test that a fresh store (no file on disk) initializes with empty gates
     - _Requirements: 6.1, 6.4, 6.5_
 
-- [ ] 4. Checkpoint - Ensure all tests pass
+- [x] 4. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 5. Implement rollback path with Terraform execution

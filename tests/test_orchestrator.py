@@ -211,9 +211,10 @@ class TestHappyPath:
 
             # Pre-remediation (1st call) + tflocal apply (2nd call) + post-remediation (3rd call)
             assert mock_run.call_count == 3
-            # Verify tflocal apply call
+            # Verify tflocal apply call (TF_CMD is resolved to absolute path)
             apply_call_args = mock_run.call_args_list[1][0][0]
-            assert apply_call_args == ["tflocal", "apply", "-auto-approve"]
+            assert "tflocal" in apply_call_args[0].lower()
+            assert apply_call_args[1:] == ["apply", "-auto-approve"]
             # Verify post-remediation hook call
             post_call_args = mock_run.call_args_list[2][0][0]
             assert "post-remediation.sh" in post_call_args[1]
@@ -925,5 +926,5 @@ class TestSavingsTrackerWiring:
             result = orch.approve("APPROVE vol-abc123")
 
         assert result.success is False
-        assert "tflocal apply failed" in result.error
+        assert "apply failed" in result.error
         orch._savings_tracker.record_run.assert_not_called()
