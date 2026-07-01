@@ -18,8 +18,10 @@ Usage:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -64,6 +66,8 @@ from agents.savings_tracker import SavingsTracker
 TF_CMD = os.environ.get("TF_CMD", "tflocal")
 
 TF_CMD_ALLOWLIST = {"terraform", "tflocal"}
+
+_RESOURCE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_:./]{1,256}$")
 
 
 def _validate_tf_cmd() -> str:
@@ -785,14 +789,32 @@ class Orchestrator:
         return None
 
     def _extract_resource_id_from_command(self, command: str, prefix: str) -> str | None:
-        """Extract the resource_id portion from a command string."""
+        """Extract and validate resource_id from a command string.
+
+        Validates against an allowlist regex permitting only:
+        alphanumeric, hyphens, underscores, colons, periods, forward slashes.
+        Total length: 1-256 characters.
+
+        Returns None and logs at DEBUG level if validation fails.
+        """
         expected_prefix = prefix + " "
         if not command.startswith(expected_prefix):
             return None
-        resource_id = command[len(expected_prefix):]
-        if not resource_id or " " in resource_id:
+
+        candidate = command[len(expected_prefix):]
+
+        # Reject empty or whitespace-only before regex
+        if not candidate or candidate.isspace():
             return None
-        return resource_id
+
+        # Allowlist validation
+        if not _RESOURCE_ID_PATTERN.match(candidate):
+            logging.getLogger(__name__).debug(
+                "Rejected resource ID: %s", candidate[:64]
+            )
+            return None
+
+        return candidate
 
     def _find_plan(self, resource_id: str) -> RemediationPlan | None:
         """Find a remediation plan by resource_id."""

@@ -62,7 +62,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Test rejection of basename not in allowlist (e.g., `"evil_binary"`)
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-  - [ ] 2.4 Implement resource ID extraction with allowlist validation
+  - [x] 2.4 Implement resource ID extraction with allowlist validation
     - Add `_RESOURCE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9\-_:./]{1,256}$")` constant
     - Implement `_extract_resource_id_from_command()` method: validate prefix, reject empty/whitespace, validate against allowlist regex, return `None` and log DEBUG on failure
     - _Requirements: 9.1, 9.2, 9.3_
