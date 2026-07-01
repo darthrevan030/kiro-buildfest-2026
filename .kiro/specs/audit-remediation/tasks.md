@@ -44,7 +44,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Test that UI displays "no data available" message when artifact file is missing
     - _Requirements: 4.1, 4.3, 4.5, 4.6_
 
-- [ ] 2. Implement security validation layer
+- [x] 2. Implement security validation layer
   - [x] 2.1 Implement TF_CMD validation in Orchestrator
     - Add `TF_CMD_ALLOWLIST = {"terraform", "tflocal"}` constant
     - Implement `_validate_tf_cmd()` function: reject path separators, validate basename against allowlist, resolve via `shutil.which()`, raise `RuntimeError` on any failure
@@ -67,7 +67,7 @@ This plan implements 13 audit remediation findings (Req 14 is deferred) organize
     - Implement `_extract_resource_id_from_command()` method: validate prefix, reject empty/whitespace, validate against allowlist regex, return `None` and log DEBUG on failure
     - _Requirements: 9.1, 9.2, 9.3_
 
-  - [ ] 2.5 Write property test for resource ID extraction
+  - [x] 2.5 Write property test for resource ID extraction
     - **Property 4: Resource ID Extraction Allowlist**
     - **Validates: Requirements 9.1, 9.2, 9.3**
 

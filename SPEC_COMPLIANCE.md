@@ -1,6 +1,6 @@
 # Spec Compliance Report
 
-Generated: 2026-07-01T17:33:53Z
+Generated: 2026-07-01T17:36:24Z
 
 | # | Task | Status | Artifact Verified |
 |---|------|--------|-------------------|
@@ -14,7 +14,7 @@ Generated: 2026-07-01T17:33:53Z
 | 8 | 2. Implement security validation layer | ❌ Pending | — |
 | 9 | 2.1 Implement TF_CMD validation in Orchestrator | ✅ Done | no mapping |
 | 10 | 2.2 Write property test for TF_CMD validation | ✅ Done | no mapping |
-| 11 | 2.3 Write unit tests for TF_CMD PATH resolution (`tests/test_tf_cmd_validation.py`) | ⏳ Partial | no mapping |
+| 11 | 2.3 Write unit tests for TF_CMD PATH resolution (`tests/test_tf_cmd_validation.py`) | ✅ Done | no mapping |
 | 12 | 2.4 Implement resource ID extraction with allowlist validation | ✅ Done | no mapping |
 | 13 | 2.5 Write property test for resource ID extraction | ❌ Pending | — |
 | 14 | 3. Implement persistent approval gates | ❌ Pending | — |
